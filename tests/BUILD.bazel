@@ -1,0 +1,102 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_test(
+    name = "alarm_database_test",
+    srcs = [
+        "data/alarm_database_test.cc",
+        "test_framework.h",
+    ],
+    deps = [
+        "//data:alarm_data",
+    ],
+)
+
+cc_test(
+    name = "holiday_engine_test",
+    srcs = [
+        "core/holiday_engine_test.cc",
+        "test_framework.h",
+    ],
+    deps = [
+        "//core:alarm_core",
+    ],
+)
+
+cc_test(
+    name = "alarm_scheduler_test",
+    srcs = [
+        "core/alarm_scheduler_test.cc",
+        "test_framework.h",
+    ],
+    deps = [
+        "//core:alarm_core",
+    ],
+)
+
+cc_test(
+    name = "audio_haptic_test",
+    srcs = [
+        "core/audio_haptic_test.cc",
+        "test_framework.h",
+    ],
+    deps = [
+        "//core:alarm_core",
+    ],
+)
+
+cc_test(
+    name = "skip_rule_test",
+    srcs = [
+        "core/skip_rule_test.cc",
+        "test_framework.h",
+    ],
+    deps = [
+        "//core:alarm_core",
+    ],
+)
+
+cc_test(
+    name = "math_challenge_test",
+    srcs = [
+        "core/math_challenge_test.cc",
+        "test_framework.h",
+    ],
+    deps = [
+        "//core:alarm_core",
+    ],
+)
+
+cc_test(
+    name = "shake_challenge_test",
+    srcs = [
+        "core/shake_challenge_test.cc",
+        "test_framework.h",
+    ],
+    deps = [
+        "//core:alarm_core",
+    ],
+)
+
+cc_test(
+    name = "ringtone_fallback_test",
+    srcs = [
+        "core/ringtone_fallback_test.cc",
+        "test_framework.h",
+    ],
+    deps = [
+        "//core:alarm_core",
+    ],
+)
+
+cc_test(
+    name = "countdown_formatter_test",
+    srcs = [
+        "core/countdown_formatter_test.cc",
+        "test_framework.h",
+    ],
+    deps = [
+        "//core:alarm_core",
+    ],
+)

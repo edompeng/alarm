@@ -1,0 +1,13 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "app_native",
+    srcs = glob(["src/**/*.cc"], allow_empty = True),
+    hdrs = glob(["src/**/*.h"], allow_empty = True),
+    deps = [
+        "//core:alarm_core",
+        "//data:alarm_data",
+    ],
+)

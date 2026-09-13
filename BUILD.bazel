@@ -1,0 +1,2 @@
+# Root package for Android Smart Alarm
+package(default_visibility = ["//visibility:public"])

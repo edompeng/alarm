@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Select Ringtone Source (选择铃声来源)"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp" />
+
+    <RadioGroup
+        android:id="@+id/rg_ringtone_source"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <RadioButton
+            android:id="@+id/rb_local_chime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Local Gentle Chime (本地轻柔铃声)"
+            android:checked="true" />
+
+        <RadioButton
+            android:id="@+id/rb_dynamic_weather"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dynamic Weather Soundscape (动态天气音效)" />
+
+        <RadioButton
+            android:id="@+id/rb_qq_music"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="QQ Music Daily Radar (QQ音乐每日雷达)" />
+
+        <RadioButton
+            android:id="@+id/rb_netease_music"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="NetEase Cloud Music Daily (网易云每日推荐)" />
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/btn_confirm_ringtone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Confirm Selection" />
+
+</LinearLayout>

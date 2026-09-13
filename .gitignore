@@ -1,0 +1,21 @@
+# Bazel
+bazel-*
+.bazelrc.local
+
+# Android & Java
+*.class
+*.jar
+*.dex
+*.apk
+*.aab
+target/
+build/
+.gradle/
+*.iml
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp

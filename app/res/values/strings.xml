@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Smart Alarm</string>
+    <string name="statutory_workdays">Statutory Workdays (法定工作日)</string>
+    <string name="quick_nap">Quick Nap (快速午休)</string>
+    <string name="snooze">Snooze (稍后提醒)</string>
+    <string name="dismiss">Dismiss (关闭)</string>
+    <string name="skip_today">Skip Today (跳过今天)</string>
+    <string name="vacation_mode">Skip Multiple Days (跳过多天)</string>
+    <string name="alarm_ringing_toast_prefix">Alarm will ring in </string>
+</resources>
