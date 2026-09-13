@@ -1,0 +1,31 @@
+--- a/cc/private/toolchain/osx_cc_wrapper.sh.tpl
++++ b/cc/private/toolchain/osx_cc_wrapper.sh.tpl
+@@ -48,9 +48,17 @@
+ SED=/usr/bin/sed
+ [ -x "$SED" ] || SED="sed"
+ 
++DEP_FILE=
++DEP_FILE_NEXT=0
++
+ parse_option() {
+     opt=$1
+-    if [ "$OUTPUT" = "1" ]; then
++    if [ "$DEP_FILE_NEXT" = "1" ]; then
++        DEP_FILE=$opt
++        DEP_FILE_NEXT=0
++    elif [ "$opt" = "-MF" ]; then
++        DEP_FILE_NEXT=1
++    elif [ "$OUTPUT" = "1" ]; then
+         OUTPUT=$opt
+     elif [ "${opt#-l}" != "$opt" ]; then
+         LIBS="${opt#-l} $LIBS"
+@@ -90,6 +98,9 @@
+ 
+ # Call the C++ compiler
+ %{cc} "$@"
++if [ -n "$DEP_FILE" ] && [ -f "$DEP_FILE" ]; then
++    /usr/bin/sed -i "" '/SDKSettings\.json/d' "$DEP_FILE" 2>/dev/null || true
++fi
+ 
+ # Generate an empty file if header processing succeeded.
+ case $OUTPUT in

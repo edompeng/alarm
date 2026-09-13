@@ -30,7 +30,13 @@ public class AlarmEditDialog extends Dialog {
     private RadioGroup mRgRepeat;
     private LinearLayout mLayoutCustomDays;
     private ToggleButton mTbMon, mTbTue, mTbWed, mTbThu, mTbFri, mTbSat, mTbSun;
+    private TextView mTvRingtoneName;
+    private Button mBtnPickRingtone;
+    private android.widget.Switch mSwVibrate;
     private Button mBtnDelete;
+
+    private String mSelectedRingtoneUri;
+    private String mSelectedRingtoneTitle = "Default Alarm Sound";
 
     public AlarmEditDialog(Context context, AlarmListAdapter.AlarmItemModel existingItem,
                            OnAlarmSavedListener listener) {
@@ -50,6 +56,9 @@ public class AlarmEditDialog extends Dialog {
         mRgRepeat = findViewById(R.id.rg_repeat_mode);
         mLayoutCustomDays = findViewById(R.id.layout_custom_days);
         mBtnDelete = findViewById(R.id.btn_delete_alarm);
+        mTvRingtoneName = findViewById(R.id.tv_ringtone_name);
+        mBtnPickRingtone = findViewById(R.id.btn_pick_ringtone);
+        mSwVibrate = findViewById(R.id.sw_alarm_vibrate);
 
         mTbMon = findViewById(R.id.tb_mon);
         mTbTue = findViewById(R.id.tb_tue);
@@ -77,6 +86,11 @@ public class AlarmEditDialog extends Dialog {
                 mRgRepeat.check(R.id.rb_repeat_once);
             }
 
+            mSelectedRingtoneUri = mExistingItem.ringtoneUri;
+            mSelectedRingtoneTitle = mExistingItem.ringtoneTitle != null ? mExistingItem.ringtoneTitle : "Default Alarm Sound";
+            mTvRingtoneName.setText(mSelectedRingtoneTitle);
+            mSwVibrate.setChecked(mExistingItem.vibrateEnabled);
+
             mBtnDelete.setVisibility(View.VISIBLE);
             mBtnDelete.setOnClickListener(v -> {
                 if (mListener != null) {
@@ -91,7 +105,14 @@ public class AlarmEditDialog extends Dialog {
             mTpTime.setHour(now.get(Calendar.HOUR_OF_DAY));
             mTpTime.setMinute(0);
             mRgRepeat.check(R.id.rb_repeat_once);
+
+            mSelectedRingtoneUri = null;
+            mSelectedRingtoneTitle = "Default Alarm Sound";
+            mTvRingtoneName.setText("Default Alarm Sound");
+            mSwVibrate.setChecked(true);
         }
+
+        mBtnPickRingtone.setOnClickListener(v -> showRingtonePickerDialog());
 
         mRgRepeat.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rb_repeat_custom) {
@@ -103,6 +124,50 @@ public class AlarmEditDialog extends Dialog {
 
         findViewById(R.id.btn_cancel_alarm).setOnClickListener(v -> dismiss());
         findViewById(R.id.btn_save_alarm).setOnClickListener(v -> saveAlarm());
+    }
+
+    private void showRingtonePickerDialog() {
+        final java.util.List<String> titles = new java.util.ArrayList<>();
+        final java.util.List<String> uris = new java.util.ArrayList<>();
+
+        titles.add("Default Alarm Sound");
+        android.net.Uri defaultUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM);
+        uris.add(defaultUri != null ? defaultUri.toString() : "");
+
+        try {
+            android.media.RingtoneManager rm = new android.media.RingtoneManager(getContext());
+            rm.setType(android.media.RingtoneManager.TYPE_ALARM);
+            android.database.Cursor cursor = rm.getCursor();
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    String title = cursor.getString(android.media.RingtoneManager.TITLE_COLUMN_INDEX);
+                    android.net.Uri uri = rm.getRingtoneUri(cursor.getPosition());
+                    if (title != null && uri != null) {
+                        titles.add(title);
+                        uris.add(uri.toString());
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        if (titles.size() <= 1) {
+            titles.add("Classic Bell");
+            uris.add("content://settings/system/alarm_alert");
+            titles.add("Digital Beep");
+            uris.add("android.resource://system/alarm_beep");
+        }
+
+        CharSequence[] items = titles.toArray(new CharSequence[0]);
+        new android.app.AlertDialog.Builder(getContext())
+                .setTitle("Select Alarm Sound")
+                .setItems(items, (dialog, which) -> {
+                    mSelectedRingtoneTitle = titles.get(which);
+                    mSelectedRingtoneUri = uris.get(which);
+                    mTvRingtoneName.setText(mSelectedRingtoneTitle);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void saveAlarm() {
@@ -133,7 +198,13 @@ public class AlarmEditDialog extends Dialog {
         boolean isEnabled = true;
 
         AlarmListAdapter.AlarmItemModel item = new AlarmListAdapter.AlarmItemModel(
-                id, hour, minute, isEnabled, repeatMode, daysBitmask, label);
+                id, hour, minute, isEnabled, repeatMode, daysBitmask, label,
+                mExistingItem != null && mExistingItem.isQuickNap,
+                mSelectedRingtoneUri,
+                mSelectedRingtoneTitle,
+                mSwVibrate.isChecked(),
+                mExistingItem != null ? mExistingItem.skippedDates : new java.util.ArrayList<>()
+        );
 
         if (mListener != null) {
             mListener.onAlarmSaved(item);
@@ -143,23 +214,23 @@ public class AlarmEditDialog extends Dialog {
 
     private int getDaysBitmask() {
         int mask = 0;
-        if (mTbMon.isChecked()) mask |= (1 << 0);
-        if (mTbTue.isChecked()) mask |= (1 << 1);
-        if (mTbWed.isChecked()) mask |= (1 << 2);
-        if (mTbThu.isChecked()) mask |= (1 << 3);
-        if (mTbFri.isChecked()) mask |= (1 << 4);
-        if (mTbSat.isChecked()) mask |= (1 << 5);
-        if (mTbSun.isChecked()) mask |= (1 << 6);
+        if (mTbSun.isChecked()) mask |= (1 << 0);
+        if (mTbMon.isChecked()) mask |= (1 << 1);
+        if (mTbTue.isChecked()) mask |= (1 << 2);
+        if (mTbWed.isChecked()) mask |= (1 << 3);
+        if (mTbThu.isChecked()) mask |= (1 << 4);
+        if (mTbFri.isChecked()) mask |= (1 << 5);
+        if (mTbSat.isChecked()) mask |= (1 << 6);
         return mask;
     }
 
     private void setDaysBitmask(int mask) {
-        mTbMon.setChecked((mask & (1 << 0)) != 0);
-        mTbTue.setChecked((mask & (1 << 1)) != 0);
-        mTbWed.setChecked((mask & (1 << 2)) != 0);
-        mTbThu.setChecked((mask & (1 << 3)) != 0);
-        mTbFri.setChecked((mask & (1 << 4)) != 0);
-        mTbSat.setChecked((mask & (1 << 5)) != 0);
-        mTbSun.setChecked((mask & (1 << 6)) != 0);
+        mTbSun.setChecked((mask & (1 << 0)) != 0);
+        mTbMon.setChecked((mask & (1 << 1)) != 0);
+        mTbTue.setChecked((mask & (1 << 2)) != 0);
+        mTbWed.setChecked((mask & (1 << 3)) != 0);
+        mTbThu.setChecked((mask & (1 << 4)) != 0);
+        mTbFri.setChecked((mask & (1 << 5)) != 0);
+        mTbSat.setChecked((mask & (1 << 6)) != 0);
     }
 }

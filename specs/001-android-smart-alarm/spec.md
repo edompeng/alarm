@@ -16,9 +16,25 @@
 - Q: How should the standard alarm creation and list management interactions be structured in the user interface? → A: Main screen shows a scrollable card list of all created alarms with formatted time (HH:mm), recurrence summary, custom label, and an instant On/Off toggle switch; tapping the Add button (`+`) or an existing alarm opens a dedicated edit screen with standard time picker (hour/minute), recurrence selector, and label field.
 - Q: When adding an alarm, what should be the default recurrence mode and behavior if the user only sets the time (hour and minute)? → A: "Ring Once" by default (rings on the next upcoming occurrence of the configured time, then automatically switches to Off after ringing); recurrence (Daily, Custom Days, or Statutory Workdays) is activated only when selected.
 - Q: How should long-pressing an alarm card trigger the date skip functionality? → A: Long-pressing an alarm item opens a context menu containing "Skip Dates / Vacation Mode" (跳过日期/休假模式), "Edit Alarm", and "Delete Alarm"; selecting Skip Dates opens a monthly calendar dialog allowing users to browse months and manually toggle/cancel alarm reminders for specific calendar dates, with skipped dates displayed as an active status badge on the card and ringing suppressed on those dates.
-- Q: What underlying system mechanism should be used to wake up the phone, play audio, and present the full-screen alert when the alarm time arrives? → A: Use Android's highest-precision `AlarmManager.setAlarmClock()` with `AlarmClockInfo` referencing `MainActivity` as show intent; when the trigger fires, `AlarmTriggerReceiver` acquires a temporary WakeLock, streams audio over the independent `STREAM_ALARM` channel (penetrating DND mode with crescendo volume), activates linear motor haptics, and issues a top-priority `fullScreenIntent` launching `RingingActivity` directly over the lockscreen.
+- Q: What underlying system mechanism should be used to wake up the phone, play audio, and present the full-screen alert when the alarm time arrives? → A: Use Android's `AlarmManager.setAlarmClock()` with an explicit immutable broadcast PendingIntent targeting `AlarmTriggerReceiver` and a separate `MainActivity` show intent. The receiver validates and atomically claims the persisted occurrence, then hands audio, haptics, and bounded wake-lock ownership to a foreground ringing service. Its `CATEGORY_ALARM` notification may present `RingingActivity` via full-screen intent when permitted; the Activity is presentation, not the only ringing owner.
 - Q: How should Quick Nap countdown alarms be represented in the alarm list and handled across their lifecycle? → A: Tapping a Quick Nap button (15m, 30m, 45m, 60m) immediately creates an active countdown alarm card in the main list displaying its target wake-up time, an exclusive Quick Nap badge, and dynamic remaining duration; once the nap alarm finishes ringing, is dismissed by the user, or is manually toggled off, it automatically destroys and removes itself from the list without leaving residual inactive records.
 - Q: How should individual ringtone and vibration settings be configured per alarm? → A: In AlarmEditDialog, each alarm provides dedicated rows for ringtone and vibration; tapping Ringtone invokes the native Android system RingtoneManager (TYPE_ALARM) allowing users to select standard system alarm tones, while Vibration provides an independent toggle switch for enabling or disabling tactile alerts, storing the selected ringtone URI and vibration preference independently for each alarm.
+
+### Session 2026-09-14
+- Q: How should the application ensure alarms reliably trigger and wake the screen even after the user manually swipes away or closes the app from the Recent Tasks list? → A: Persist the intended occurrence, register one OS-level broadcast alarm, and let `AlarmTriggerReceiver` recreate the process and hand off to the bounded ringing service. The notification presents full-screen UI only when permitted. No standing service or polling is used before trigger, so Recent Tasks removal does not remove the authoritative OS registration.
+- Q: How should the new Settings screen and in-app language switching (Chinese/English) be accessed and applied across the application? → A: Dedicated Settings screen opened via a header button (⚙️), providing a language selector ("Follow System / 跟随系统", "简体中文", "English") that dynamically reapplies the app locale and refreshes all active UI components immediately.
+- Q: When the user taps the quick-dismiss action in the advance notification ("Upcoming Alarm in N minutes"), how should that dismissal affect the alarm schedule? → A: Single-occurrence skip: Suppress only today's trigger; recurring alarms (Statutory Workdays, Custom Days) remain enabled and advance to the next cycle, while one-time alarms are marked disabled, preserving recurring routines.
+- Q: Where and how should users configure the values and units (minutes vs. hours) for the four Quick Nap preset slots? → A: Dual access: Configurable in the global Settings screen (all 4 slots with number input + minutes/hours unit selector) and directly accessible via long-press on any dashboard nap button, updating dashboard labels (e.g. 15m, 1h).
+- Q: What configuration controls should be provided in the Settings screen for setting the advance notification time window (N minutes before ringing)? → A: A dedicated setting row with an advance notification toggle (default: On) and an interval selector with standard presets ("15 minutes", "30 minutes (Default)", "45 minutes", "60 minutes", and "Custom...").
+- Q: When an automatic background holiday sync attempt fails during app launch, how should the failure be communicated to the user? → A: Display a modal error alert dialog ("Update Failed / 更新失败") when a user manually triggers sync in Settings; keep automatic startup sync completely silent, preserving existing cached rules and silently scheduling a retry on the next app launch to prevent morning UX interruption.
+- Q: How should the user view and modify an alarm's active skip configuration? → A: Dual entry points: Tapping the "Vacation (X skipped)" badge directly on the alarm card or selecting "Skip Dates / Vacation Mode" from the long-press context menu opens VacationCalendarDialog pre-populated with currently skipped dates, allowing users to toggle dates, save updates, or tap a dedicated "Clear Skips" button to purge all skips at once.
+- Q: What default URL and editing controls should be provided in Settings for the statutory holiday synchronization endpoint? → A: An editable URL text field in Settings pre-filled with a default GitHub raw / CDN endpoint hosting official holiday JSON (formatted as { "year": 2026, "holidays": [...], "workdays": [...] }), including a "Reset to Default" button and an immediate "Sync Now / 立即同步" action button.
+- Q: Where should the holiday configuration generation script output the generated files, and how should it verify if next year's schedule is officially announced? → A: Implement `scripts/generate_holiday_config.py` to query official/open holiday feeds with fallback; verify if next year's State Council announcement is gazetted (omitting next year if unannounced); output standard JSON to both `core/src/assets/holidays_<YEAR>.json` and an export distribution directory.
+- Q: For iQOO and Vivo (OriginOS) devices, what wakeup strategy and system permission guidance should the app implement to guarantee alarms ring after the app is closed? → A: Use the same canonical broadcast-alarm pipeline for ordinary backgrounding, Recent Tasks removal, and process death; detect Vivo/iQOO devices and guide users to enable "Allow Background High Power Consumption" (允许后台高耗电) and "Autostart" (自启动). This later clarification supersedes any direct-Activity design. Android package force-stop and equivalent OEM deep-stop are separate lifecycle states governed by FR-049 and cannot be bypassed by intent flags.
+- Q: Which app-exit scope must still guarantee that the alarm rings and presents its alert? → A: Level C was initially requested, covering normal backgrounding, removal from Recent Tasks, system process reclamation, Android Settings "Force stop", and equivalent OEM deep-stop actions; the force-stop portion is subject to the explicit platform-limitation rule clarified below.
+- Q: If Android or an OEM cancels all pending alarms after force-stop, which product acceptance rule should apply? → A: Accept the platform limitation: warn the user that alarms cannot trigger while the application remains force-stopped and require the user to reopen the application before alarm delivery is guaranteed again.
+- Q: May users enable an alarm when exact-alarm or full-screen-alert permission is unavailable or revoked? → A: Yes. Missing either permission must not block alarm activation; the application uses the system capabilities still available and delivers the alarm on a best-effort basis.
+- Q: How should the application communicate missed-alarm risk while permission limitations force best-effort delivery? → A: Keep a persistent "Alarm protection limited / 闹钟保护受限" warning banner or status indicator on the main screen with a one-tap permission-settings action; remove it automatically when all required capabilities are restored.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -37,7 +53,7 @@ Can be fully tested by configuring a recurring alarm set to "Statutory Workdays"
 **Acceptance Scenarios**:
 1. **Given** a recurring alarm set to "Statutory Workdays", **When** the current date is an official national holiday (e.g., Spring Festival, National Day) falling on Monday through Friday, **Then** the alarm does not ring and automatically advances its next scheduled occurrence to the subsequent valid working date.
 2. **Given** a recurring alarm set to "Statutory Workdays", **When** the current date is an official compensatory working weekend day (Saturday or Sunday designated as a workday by the State Council), **Then** the alarm rings at the configured time.
-3. **Given** the device has network connectivity, **When** new annual holiday/workday schedules are officially released, **Then** the system automatically synchronizes and updates the local holiday calendar rules without requiring manual user intervention.
+3. **Given** the device has network connectivity, **When** new annual holiday/workday schedules are officially released, **Then** the system automatically synchronizes and updates the local holiday calendar rules on app launch (retrying on subsequent launches upon failure, or waiting 7 days after a successful sync) or on demand via Settings.
 4. **Given** the device is offline or in airplane mode, **When** evaluating whether to ring on a statutory workday, **Then** the system relies on locally cached holiday rules.
 
 ---
@@ -75,11 +91,12 @@ A major pain point with standard recurring alarms is that turning off an alarm w
 Can be fully tested by creating a recurring Monday-Friday alarm. When the notification appears 45 minutes before the alarm, tap "Skip Today". Verify the alarm does not ring today, but is automatically scheduled for tomorrow. Then, long-press the alarm, open the calendar picker, deselect a 3-day range, confirm, and verify those 3 days are skipped while all other days ring as scheduled.
 
 **Acceptance Scenarios**:
-1. **Given** an upcoming alarm scheduled within 30 to 60 minutes, **When** the user views the lockscreen or notification tray, **Then** an ongoing advance card appears showing "Alarm rings in X minutes" with a prominent "Skip Today / Dismiss Once" action button.
-2. **Given** the user taps "Skip Today", **When** the scheduled time arrives, **Then** the alarm remains silent for that specific instance, dismissed notification clears, and the alarm automatically resets its trigger for the subsequent scheduled cycle.
-3. **Given** a recurring alarm, **When** the user long-presses the alarm item and selects "Skip Multiple Days / Vacation Mode", **Then** a calendar dialog opens displaying dates from today through the end of the selected month, with all normally scheduled ringing dates highlighted.
-4. **Given** the multi-day calendar view is displayed, **When** the user taps on highlighted dates to deselect them and clicks Save, **Then** a secondary confirmation dialog lists the exact dates to be skipped.
+1. **Given** an upcoming alarm scheduled within N minutes (configurable in Settings, defaulting to 30 minutes), **When** the user views the lockscreen or notification tray, **Then** an advance notification appears showing "Upcoming alarm at HH:mm" with a prominent "Dismiss / 快捷关闭" action button.
+2. **Given** the user taps "Dismiss / 快捷关闭" on the advance notification, **When** the scheduled time arrives, **Then** the alarm remains silent for that specific instance, dismissed notification clears, and recurring alarms automatically reset their trigger for the subsequent scheduled cycle (or disable for one-time alarms).
+3. **Given** a recurring alarm, **When** the user long-presses the alarm item and selects "Skip Multiple Days / Vacation Mode", **Then** a calendar dialog opens with Sunday as the first column, displaying a day-of-week header ("Sun, Mon, Tue, Wed, Thu, Fri, Sat" / "日 一 二 三 四 五 六") and scaled month navigation buttons that do not overlap or get clipped.
+4. **Given** the multi-day calendar view is displayed, **When** the user taps on dates to toggle them and clicks Save, **Then** a secondary confirmation dialog lists the exact dates to be skipped.
 5. **Given** the user confirms the secondary prompt, **When** the skipped dates arrive, **Then** the alarm does not ring on those dates, but rings normally on all non-skipped scheduled dates.
+6. **Given** an alarm already has skipped dates set, **When** the user taps the `Vacation (X skipped)` badge on the alarm card directly or selects "Skip Dates / Vacation Mode" from the long-press context menu, **Then** `VacationCalendarDialog` opens with all previously skipped dates highlighted, allowing the user to view, modify (toggle dates), or tap "Clear Skips / 清除跳过" to purge all skips at once.
 
 ---
 
@@ -126,6 +143,8 @@ Can be fully tested by selecting "Dynamic Weather Ringtone" on a rainy day, veri
 
 ### User Story 6 - Cold Boot / App Wakeup, AOD & Quick Nap Utilities (Priority: P3)
 
+> **Increment scope note (2026-09-14)**: The current application-exit reliability plan covers scenarios 1, 2, 8, and 9 and FR-025/FR-049–FR-051. Hardware power-off RTC wakeup in scenario 3 / FR-026 remains a separate OEM-capability feature; this increment does not claim pre-unlock or powered-off delivery.
+
 As a user managing busy daily routines,
 I want the alarm to trigger even if the app was terminated or the phone was powered off, while having quick nap shortcuts and glanceable AOD indicators,
 So that I have absolute peace of mind and frictionless daytime scheduling.
@@ -134,26 +153,53 @@ So that I have absolute peace of mind and frictionless daytime scheduling.
 Provides enterprise-grade reliability and convenience for quick daytime power naps and glanceable status checks.
 
 **Independent Test**:
-Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, killing the app from the recents task manager, and confirming the alarm rings exactly 15 minutes later with TTS speech reciting the nap label.
+Can be fully tested by setting a Quick Nap alarm, separately exercising normal backgrounding, removal from Recent Tasks, and system process reclamation, and confirming the alarm rings at the configured time with its full-screen alert and TTS label. Force-stop and equivalent OEM deep-stop are tested separately by verifying that the limitation warning is present and that reopening the app restores the alarm schedule.
 
 **Acceptance Scenarios**:
-1. **Given** the application has been closed or terminated from memory, **When** the scheduled alarm time arrives, **Then** the system automatically wakes the application and launches the full-screen ringing interface.
-2. **Given** the device supports hardware power-off RTC wakeup, **When** an alarm is set and the phone is shut down, **Then** the hardware initiates cold boot 1 to 2 minutes prior to the scheduled time and rings on schedule.
-3. **Given** the user opens the Quick Nap screen, **When** tapping a preset duration button (15, 30, 45, or 60 minutes), **Then** a one-off countdown alarm is created and activated instantly with a single tap.
-4. **Given** any alarm is saved or toggled on, **When** the operation completes, **Then** a transient toast message appears indicating the precise time delta: "Alarm will ring in X days, Y hours, and Z minutes".
-5. **Given** Always-On Display (AOD) is supported and active, **When** the screen is dark, **Then** the next alarm time and icon are displayed, transitioning to a breathing visual pulse when ringing is imminent.
-6. **Given** an alarm has a text label assigned and "TTS Voice Readout" is enabled, **When** the alarm rings, **Then** speech synthesis vocalizes the alarm label alongside the ringtone.
+1. **Given** the application is backgrounded, removed from Recent Tasks, or killed by system process reclamation (including on Vivo/iQOO OriginOS), **When** the scheduled alarm time arrives, **Then** the device wakes and presents `RingingActivity` over the lockscreen at the configured time without requiring the user to reopen the application.
+2. **Given** Android Settings "Force stop" or an equivalent OEM deep-stop action places the package in a stopped state, **When** the user reviews alarm-reliability guidance or next reopens the application, **Then** the application clearly warns that alarms cannot trigger while force-stopped and reschedules all enabled alarms after reopening restores execution eligibility.
+3. **Given** the device supports hardware power-off RTC wakeup, **When** an alarm is set and the phone is shut down, **Then** the hardware initiates cold boot 1 to 2 minutes prior to the scheduled time and rings on schedule.
+4. **Given** the user views the Quick Nap section on the main dashboard, **When** tapping a preset duration button, **Then** a one-off countdown alarm is created and activated instantly with a single tap, using the user-configured duration and unit (minutes or hours).
+5. **Given** any alarm is saved or toggled on, **When** the operation completes, **Then** a transient toast message appears indicating the precise time delta: "Alarm will ring in X days, Y hours, and Z minutes".
+6. **Given** Always-On Display (AOD) is supported and active, **When** the screen is dark, **Then** the next alarm time and icon are displayed, transitioning to a breathing visual pulse when ringing is imminent.
+7. **Given** an alarm has a text label assigned and "TTS Voice Readout" is enabled, **When** the alarm rings, **Then** speech synthesis vocalizes the alarm label alongside the ringtone.
+8. **Given** exact-alarm permission, full-screen-alert permission, or both are unavailable or revoked, **When** the user enables an alarm, **Then** the application accepts the alarm and attempts delivery using the system capabilities still available instead of blocking activation.
+9. **Given** an enabled alarm is operating with limited exact-alarm or full-screen-alert capability, **When** the user views the main screen, **Then** a persistent "Alarm protection limited / 闹钟保护受限" warning and one-tap permission-settings action remain visible until all required capabilities are restored.
+
+---
+
+### User Story 7 - Application Settings, Language Switching & Notification Preferences (Priority: P2)
+
+As an international or bilingual user,
+I want a dedicated Settings screen to switch the interface language (Chinese/English), configure pre-alarm advance notification timing, and customize the 4 Quick Nap slots,
+So that the application accommodates my native language, waking preferences, and daytime rest habits.
+
+**Why this priority**:
+Settings provide the central control hub for localization, notification frequency, and daytime nap customization, directly resolving user-reported workflow friction.
+
+**Independent Test**:
+Can be fully tested by opening the Settings screen via the header button (⚙️), changing the language to English (verifying immediate interface update without reboot), setting advance notification lead time to 30 minutes, customizing Quick Nap Slot 3 to "1 hour", and confirming the dashboard button reflects "1h".
+
+**Acceptance Scenarios**:
+1. **Given** the user is on the main screen, **When** tapping the Settings button (⚙️) in the header, **Then** the application opens a dedicated Settings screen displaying Language, Advance Notification, and Quick Nap Presets.
+2. **Given** the user changes language between "Follow System / 跟随系统", "简体中文", and "English", **When** an option is selected, **Then** the application immediately applies the chosen locale to all screens, dialogs, and cards without requiring a device restart.
+3. **Given** the user configures the Advance Notification window (default 30 minutes), **When** an alarm is within N minutes of ringing, **Then** an advance notification appears in the status bar with a "Dismiss / 快捷关闭" button that suppresses only that single upcoming instance without disrupting recurring schedules.
+4. **Given** the user configures Quick Nap presets in Settings (or via long-press on dashboard buttons), **When** changing a slot value or unit (minutes/hours), **Then** the dashboard buttons immediately update their labels and durations.
+5. **Given** the user configures the Statutory Holiday Sync URL in Settings, **When** tapping "Sync Now / 立即同步", **Then** the system requests the latest holiday configuration JSON from the configured URL; if the request succeeds, it updates local holiday rules and displays a success message; if the request fails, it discards changes, preserves existing rules, and presents a modal error dialog ("Update Failed / 更新失败").
+6. **Given** automatic holiday sync is enabled, **When** the application is launched, **Then** it evaluates the sync schedule: executing an automatic sync on the first app launch, silently retrying on subsequent launches if the previous attempt failed, or waiting 7 days after a successful sync before initiating the next automatic update on launch.
 
 ---
 
 ### Edge Cases
 
 - **Time Zone & Daylight Saving Transition**: What happens when the device crosses time zones or standard time transitions occur? The alarm recalculates its absolute epoch trigger time to preserve local wall-clock hour and minute fidelity.
-- **Network Loss During Annual Holiday Refresh**: If the annual State Council holiday calendar update request fails due to server timeout or lack of network, the system preserves cached calendar data, logs a silent retry with exponential backoff, and alerts the user only if the local calendar has expired.
+- **Network Loss or Invalid Format During Holiday Sync**: If the remote holiday JSON request fails (network timeout, invalid JSON, or server 404/500), the system preserves existing local cached calendar rules with zero corruption. On manual sync, an error modal dialog informs the user of failure; on automatic startup sync, the failure is handled silently and scheduled to retry on the next app cold start.
 - **Audio Focus Conflict**: If another media application or a phone call is active when the alarm triggers, the alarm audio stream ducks or pauses conflicting media and rings over the call/headset channel according to emergency audio priority policies.
 - **Sensor Obstruction in Pocket**: If the phone is inside a bag or pocket, "Pick up to lower volume" or "Flip to mute" must avoid accidental triggering by evaluating multi-sensor fusion (proximity sensor combined with accelerometer orientation).
 - **Infinite Snooze Battery Exhaustion**: If snooze is set to infinite and the user does not respond for an extended period, the alarm automatically silences after a safety timeout (e.g., 20 minutes continuous ringing per snooze instance) to avoid thermal throttling and complete battery drain.
 - **Deselecting All Dates in Multi-Day Skip**: If a user deselects all dates up to the end of the month, the system clarifies that this turns off the alarm for the remainder of the month while keeping the core recurrence pattern intact.
+- **Forced-Stop Package State**: Android Settings "Force stop" and equivalent OEM deep-stop actions can cancel or suppress pending alarms. The application does not claim delivery while it remains force-stopped; it must warn the user of this limitation and restore all enabled schedules when the user reopens it. Recent Tasks removal remains a distinct, fully supported state.
+- **Missing or Revoked Alarm Permissions**: If exact-alarm or full-screen-alert permission is unavailable or revoked, alarm activation remains allowed. Delivery is best-effort: timing can be inexact and the alert may be limited to the notification surfaces permitted by the system. The main screen must retain a visible limited-protection warning and permission-settings action until capability is restored.
 
 ---
 
@@ -168,10 +214,10 @@ Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, ki
 - **FR-004**: System MUST allow users to view the current year's synchronized holiday/workday calendar within the application settings.
 
 #### Advance Skip & Vacation Management
-- **FR-005**: System MUST display an advance notification card 30 to 60 minutes prior to a scheduled alarm offering a single-tap "Skip Today / Dismiss Once" action.
-- **FR-006**: Tapping "Skip Today" MUST suppress only the upcoming scheduled occurrence without altering the overall recurring schedule.
+- **FR-005**: System MUST display an advance notification card N minutes prior to a scheduled alarm (configurable in Settings, defaulting to 30 minutes) offering a single-tap "Dismiss / 快捷关闭" action.
+- **FR-006**: Tapping "Dismiss / 快捷关闭" MUST suppress only the upcoming scheduled occurrence without altering the overall recurring schedule (or disabling one-time alarms).
 - **FR-007**: System MUST provide a "Skip Multiple Days / Vacation Mode" accessible via long-press on any recurring alarm.
-- **FR-008**: The multi-day skip interface MUST display a month-based calendar with month and year navigation, highlighting all scheduled ringing dates between the current date and the end of the selected month.
+- **FR-008**: The multi-day skip interface MUST display a month-based calendar with Sunday as the first column (Sun–Sat), a visible day-of-week header ("Sun, Mon, Tue, Wed, Thu, Fri, Sat" / "日 一 二 三 四 五 六"), scaled non-overlapping `<` and `>` month navigation buttons, and highlight all scheduled ringing dates between the current date and the end of the selected month.
 - **FR-009**: The multi-day skip interface MUST allow users to tap highlighted dates to deselect them, and display a secondary confirmation modal detailing the exact dates that will be skipped before persisting changes.
 - **FR-010**: Dates not deselected by the user MUST remain scheduled to ring normally.
 
@@ -195,11 +241,10 @@ Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, ki
 - **FR-023**: System MUST provide an optional Math Challenge requiring users to solve mental arithmetic problems before an alarm can be dismissed.
 - **FR-024**: System MUST provide an optional Shake Challenge requiring users to shake the phone a specified number of times before an alarm can be dismissed.
 
-#### Reliability, Background Wakeup & Auxiliary UX
-- **FR-025**: System MUST wake the application and present the active alarm interface on time even when the application is not running or has been killed by system memory management.
-- **FR-026**: System MUST interface with device hardware RTC power-off wakeup where supported by the OEM platform to boot the device and ring if powered down.
+- **FR-025**: When the required exact-alarm and full-screen-alert capabilities are available, the system MUST wake the device and present the active alarm interface on time without requiring the user to reopen the application when the application is in the background, has been killed by system memory management, or has been removed from Recent Tasks (including on Vivo/iQOO OriginOS). Recent Tasks removal and Android package force-stop MUST be treated as distinct lifecycle states.
+- **FR-026** *(deferred from the current application-exit reliability increment)*: System MUST interface with device hardware RTC power-off wakeup where a documented OEM interface is available to third-party applications. This future capability requires its own device-protected occurrence store and powered-off/pre-unlock device validation; `BOOT_COMPLETED` recovery from the current credential-protected store does not satisfy it.
 - **FR-027**: System MUST display a transient toast notification showing the exact remaining time delta ("Rings in X days, Y hours, Z minutes") whenever an alarm is saved or toggled active.
-- **FR-028**: System MUST provide a Quick Nap interface allowing instant one-tap creation of 15, 30, 45, and 60-minute countdown alarms.
+- **FR-028**: System MUST provide a Quick Nap interface allowing instant one-tap creation of countdown alarms across 4 user-customizable preset slots (defaulting to 15m, 30m, 45m, 60m; user-configurable in value and unit: minutes or hours).
 - **FR-029**: System MUST display next alarm timing information on compatible Always-On Display (AOD) surfaces and trigger visual breathing pulses near the alarm time.
 - **FR-030**: System MUST allow setting text labels for alarms and support reading the label aloud using text-to-speech (TTS) synthesis during alarm playback.
 - **FR-031**: System MUST be optimized to run with minimal battery consumption, low idle memory footprint, and compact installation package size.
@@ -208,6 +253,21 @@ Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, ki
 - **FR-034**: System MUST display all configured alarms in a scrollable list on the main screen, where each alarm card presents the formatted trigger time (HH:mm), recurrence summary, custom label, and an instant On/Off toggle switch.
 - **FR-035**: System MUST provide a dedicated alarm creation and editing interface featuring a standard time picker for hour and minute selection, recurrence configuration (once, specific days of week, or statutory workdays), label text entry, and delete capability.
 - **FR-036**: System MUST default new alarms to "Ring Once" mode when no repeat days are selected; upon completing ringing or dismissal of a "Ring Once" alarm, the system MUST automatically transition the alarm's state to disabled (Off).
+- **FR-037**: System MUST provide a dedicated Application Settings screen accessible via a header icon (⚙️) on the main dashboard, offering controls for language selection, advance notification timing, and Quick Nap presets.
+- **FR-038**: System MUST support in-app dynamic language switching between "Follow System / 跟随系统", "简体中文 (Simplified Chinese)", and "English", immediately updating all screens, dialogs, and notifications without requiring a device restart.
+- **FR-039**: System MUST allow users to customize the 4 Quick Nap slots (both numerical duration and unit: minutes or hours) from the Settings screen or via long-pressing any Quick Nap dashboard button, updating dashboard labels and countdown durations dynamically.
+- **FR-040**: System MUST provide a configurable advance notification lead time (toggleable On/Off, with options for 15, 30 [Default], 45, 60 minutes, or custom) in Settings, displaying a heads-up status bar notification prior to scheduled alarms.
+- **FR-041**: Advance notification MUST include a prominent "Dismiss / 快捷关闭" action that suppresses only the upcoming ringing instance; recurring alarms MUST remain enabled and automatically advance to the next cycle, while one-time alarms are marked disabled.
+- **FR-042**: The vacation mode monthly calendar layout MUST display Sunday in the first column (`Sun`–`Sat`), show clear day-of-week header labels ("Sun, Mon, Tue, Wed, Thu, Fri, Sat" / "日 一 二 三 四 五 六"), and scale month navigation buttons (`<`, `>`) to eliminate visual clipping or overlap.
+- **FR-043**: Settings MUST provide a Statutory Holiday Sync section featuring an editable URL text field for the remote holiday configuration endpoint, pre-populated with a valid working default CDN/GitHub raw URL, a "Reset to Default" button, and a manual "Sync Now / 立即同步" action button.
+- **FR-044**: When manual holiday sync is triggered, the system MUST issue an HTTP GET request to the configured URL; upon success, it MUST parse, validate, and update the local active holiday/workday rules and display a success confirmation; upon failure (network error, timeout, or schema mismatch), it MUST abort the update, preserve existing cached rules, and present a modal error dialog ("Update Failed / 更新失败").
+- **FR-045**: System MUST execute automatic holiday synchronization upon cold application launch: performing a sync attempt on first launch, silently retrying on subsequent launches if the previous attempt failed, and waiting at least 7 days after a successful sync before initiating the next automatic check on launch. Automatic sync failures MUST be completely silent without blocking modal popups.
+- **FR-046**: System MUST support viewing and modifying an alarm's active skip configuration: tapping the `Vacation (X skipped)` badge on the alarm card directly or choosing "Skip Dates / Vacation Mode" from the long-press menu MUST open `VacationCalendarDialog` pre-populated with all currently skipped dates, allowing users to toggle dates, save changes, or tap a dedicated "Clear Skips / 清除跳过" button to remove all skips at once.
+- **FR-047**: System repository MUST provide a script `scripts/generate_holiday_config.py` that queries authoritative/open Chinese holiday announcement feeds with fallback, checks whether the State Council holiday arrangements for the following calendar year have been gazetted (omitting the next year if not yet published), and outputs standardized JSON configuration files matching `{ "year": YYYY, "holidays": [...], "workdays": [...] }` into `core/src/assets/holidays_<YEAR>.json` and an export distribution folder.
+- **FR-048**: System MUST detect Vivo and iQOO devices (`Build.MANUFACTURER.equalsIgnoreCase("vivo")`) and provide a one-tap system guidance banner/dialog in Settings and initial startup directing users to OriginOS "Allow Background High Power Consumption" (允许后台高耗电), "Autostart" (自启动), and Battery Optimization whitelist settings.
+- **FR-049**: System MUST clearly warn users that scheduled alarms cannot be guaranteed while the application is in the Android package stopped state after Settings "Force stop" or an equivalent OEM deep-stop action. On the first subsequent explicit application launch, the system MUST reconcile every enabled alarm and MUST report full protection only if every current future occurrence registers successfully. A persisted one-time or Quick Nap occurrence already due before relaunch MUST NOT be silently shifted to tomorrow: the one-time alarm is marked missed and disabled, the expired Quick Nap is marked missed and removed, and recurring alarms advance to their next future occurrence.
+- **FR-050**: System MUST allow users to enable alarms even when exact-alarm, notification, or full-screen-alert permission/capability is unavailable. If exact permission is already unavailable while the app is running, the system MUST immediately attempt best-effort registration. If exact permission is revoked externally and Android stops the package and removes exact alarms, fallback reconciliation is required on the next explicit resume/relaunch; autonomous conversion while the package remains stopped is not promised. In either case, delivery uses only remaining platform capabilities and MUST NOT be represented as satisfying FR-025.
+- **FR-051**: While any enabled alarm lacks exact-alarm, notification, or full-screen-alert capability, or while reconciliation is incomplete or any current enabled occurrence is not registered, the main screen MUST continuously display an "Alarm protection limited / 闹钟保护受限" warning banner or status indicator with a one-tap corrective action. The warning MUST disappear automatically only after all required capabilities are available and every enabled alarm's current future occurrence has registered successfully.
 
 ---
 
@@ -216,15 +276,19 @@ Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, ki
 - **AlarmItem**: Represents a user-configured alarm.
   - Attributes: identifier, title/label, time of day (hour, minute), enabled status, repeat mode (once, day-of-week bitmask, statutory workdays), volume, crescendo duration, vibration waveform type, vibration intensity, audio routing mode (speaker-only vs default), snooze policy id, challenge policy id, ringtone configuration id.
 - **HolidayCalendarRule**: Represents official annual holiday and workday arrangements.
-  - Attributes: year, date, classification (statutory holiday, compensatory workday, regular weekend, regular weekday), official announcement reference, cached timestamp.
+  - Attributes: year, date, classification (statutory holiday, compensatory workday, regular weekend, regular weekday), official announcement reference, cached timestamp, source URL.
 - **SkipRule**: Represents temporary dismissal records.
-  - Attributes: alarm identifier, skip type (single next occurrence, multi-day explicit date list), list of skipped calendar dates, expiration timestamp.
+  - Attributes: alarm identifier, skip type (single next occurrence, multi-day explicit date list), list of skipped calendar dates, expiration timestamp; supports inspection, date addition/removal, and full clearance.
 - **RingtoneConfig**: Represents audio source settings.
   - Attributes: source type (local preset, user local file, streaming platform track/playlist, dynamic weather soundscape), provider identifier, resource URI, offline fallback resource URI.
 - **SnoozePolicy**: Represents snooze behavior configuration.
   - Attributes: interval duration (minutes), remaining repetitions, maximum allowed repetitions, safety auto-silence timeout.
 - **ChallengeConfig**: Represents anti-oversleep dismissal constraints.
   - Attributes: challenge type (none, math arithmetic, physical shake), difficulty level / target count, completed status.
+- **AppSettings**: Represents global user preferences and configuration settings.
+  - Attributes: selected language / locale ("system", "zh-CN", "en-US"), advance notification enabled (boolean), advance notification window (minutes, default 30), quick nap slot 1 (duration, unit: minutes/hours), quick nap slot 2 (duration, unit: minutes/hours), quick nap slot 3 (duration, unit: minutes/hours), quick nap slot 4 (duration, unit: minutes/hours), holiday sync URL (string), last holiday sync timestamp (epoch millis), last holiday sync status (boolean), oem whitelist guided (boolean).
+- **AlarmOccurrence**: Durable delivery identity for the next intended occurrence of one enabled alarm.
+  - Attributes: alarm identifier, generation, occurrence identifier, intended trigger epoch, last claimed occurrence identifier, and missed status. It is updated before AlarmManager registration so receivers can reject stale or duplicate PendingIntents after process recreation.
 
 ---
 
@@ -232,7 +296,7 @@ Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, ki
 
 ### Measurable Outcomes
 
-- **SC-001**: 100% of scheduled alarms ring on time within 1 second of the designated minute under standard system sleep and Doze states.
+- **SC-001**: With the exact-alarm and full-screen-alert capabilities required by FR-025 available, 100% of scheduled alarms ring on time within 1 second of the designated minute under standard system sleep and Doze states and after each supported exit state: backgrounding, Recent Tasks removal, and system process reclamation.
 - **SC-002**: Zero missed alarms due to statutory holiday shifts: 100% of statutory holidays are correctly skipped and 100% of compensatory workdays are correctly triggered when using "Statutory Workday" mode.
 - **SC-003**: 100% of users can complete setting a Quick Nap alarm in under 5 seconds with 2 taps or fewer from app launch.
 - **SC-004**: When streaming audio or dynamic weather soundscapes fail or have no network, fallback to local sound occurs in under 300 milliseconds with zero audible gap or alarm failure.
@@ -243,15 +307,18 @@ Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, ki
 - **SC-009**: 100% of core domain models, holiday calculations, and SQLite data access logic are isolated behind pure C++ interfaces with zero Android runtime dependencies, enabling direct compilation and reuse on iOS.
 - **SC-010**: 100% of end-to-end functional journeys (creation, statutory calculation, advance skip, challenge resolution, and persistence) pass successfully in the automated ADB verification suite executed against the local Android emulator.
 - **SC-011**: 100% of newly created alarms appear immediately in the main alarm list in chronological order, and toggling an alarm's On/Off switch updates its system schedule state in under 100 milliseconds.
+- **SC-012**: In 100% of force-stop and equivalent OEM deep-stop test cases, the application communicates that alarm delivery is unavailable while stopped and, on the first subsequent explicit launch, either registers the current future occurrence of every enabled alarm or reports limited protection with the failed alarm IDs. Expired one-time/Quick Nap occurrences follow FR-049 rather than being moved to tomorrow.
+- **SC-013**: In 100% of exact-alarm, notification, and full-screen-alert denial tests, users can still enable an alarm and the application attempts the remaining system-supported paths without crashing. External exact-permission revocation is reconciled on the next explicit resume/relaunch because the stopped package cannot convert canceled alarms autonomously. The main screen reports limited protection with a working corrective action until capabilities and all registrations are restored.
 
 ---
 
 ## Assumptions
 
-- **Target OS Baseline**: The application targets Android 11 (API Level 30) and above, ensuring compatibility with modern Android permission architectures (including precise alarm scheduling permissions `SCHEDULE_EXACT_ALARM` / `USE_EXACT_ALARM` and notification permissions).
+- **Target OS Baseline**: The application targets Android 11 (API Level 30) and above. This build uses the user-granted `SCHEDULE_EXACT_ALARM` model on API 31+ (not `USE_EXACT_ALARM`) plus the applicable notification and full-screen controls.
 - **Device Vendor Specifics (Samsung One UI & Vivo/iQOO OriginOS)**:
   - Linear motor haptic waveforms leverage standard Android haptic feedback constants and vendor-specific vibration effects where available, with graceful fallback to standard waveforms.
-  - Power-off alarm capability relies on device OEM RTC wake broadcast mechanisms; on devices where cold-boot RTC is restricted to pre-installed system apps, the app registers system reboot receivers to trigger immediately upon device boot, while informing users of hardware limitations.
+  - On Vivo/iQOO OriginOS devices (e.g. iQOO Z9 Turbo+), Recent Tasks removal, OEM deep cleanup, and Android package force-stop MUST be treated as distinct states. The application pairs its supported alarm delivery mechanism with a one-tap system guide to enable "Allow Background High Power Consumption" (允许后台高耗电) and "Autostart" (自启动). Delivery while the package remains force-stopped or equivalently deep-stopped is an explicit platform limitation governed by FR-049 rather than an FR-025 guarantee.
+  - Power-off alarm capability is a deferred OEM-specific feature. It may be implemented only where a documented third-party RTC interface exists, with device-protected occurrence storage and powered-off/pre-unlock evidence; ordinary `BOOT_COMPLETED` registration is not represented as equivalent.
   - AOD integration utilizes standard Android lockscreen/AOD notification surfaces and vendor lockscreen widget APIs.
 - **Streaming Music Licensing & SDK Availability**: Online streaming through QQ Music and NetEase Cloud Music utilizes official open API/SDK integrations or system audio provider intents; user account authorization is handled via standard OAuth/App-Link flows.
 - **Statutory Calendar Authority**: The annual holiday and compensatory workday dataset adheres to the official State Council (国务院办公厅) annual announcement, synchronized via an HTTPS JSON endpoint with bundled fallback rules updated with app releases.

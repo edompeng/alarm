@@ -22,9 +22,21 @@ public class AlarmListAdapter extends BaseAdapter {
         public int repeatMode; // 0=Once, 1=Custom, 2=Statutory Workdays
         public int daysBitmask;
         public String label;
+        public boolean isQuickNap;
+        public String ringtoneUri;
+        public String ringtoneTitle;
+        public boolean vibrateEnabled;
+        public List<String> skippedDates;
 
         public AlarmItemModel(long id, int hour, int minute, boolean isEnabled,
                               int repeatMode, int daysBitmask, String label) {
+            this(id, hour, minute, isEnabled, repeatMode, daysBitmask, label, false, null, "Default Alarm Sound", true, new ArrayList<>());
+        }
+
+        public AlarmItemModel(long id, int hour, int minute, boolean isEnabled,
+                              int repeatMode, int daysBitmask, String label,
+                              boolean isQuickNap, String ringtoneUri, String ringtoneTitle,
+                              boolean vibrateEnabled, List<String> skippedDates) {
             this.id = id;
             this.hour = hour;
             this.minute = minute;
@@ -32,6 +44,11 @@ public class AlarmListAdapter extends BaseAdapter {
             this.repeatMode = repeatMode;
             this.daysBitmask = daysBitmask;
             this.label = label;
+            this.isQuickNap = isQuickNap;
+            this.ringtoneUri = ringtoneUri;
+            this.ringtoneTitle = ringtoneTitle != null ? ringtoneTitle : "Default Alarm Sound";
+            this.vibrateEnabled = vibrateEnabled;
+            this.skippedDates = skippedDates != null ? new ArrayList<>(skippedDates) : new ArrayList<>();
         }
     }
 
@@ -44,10 +61,15 @@ public class AlarmListAdapter extends BaseAdapter {
         void onLongClick(AlarmItemModel item);
     }
 
+    public interface OnVacationBadgeClickListener {
+        void onVacationBadgeClick(AlarmItemModel item);
+    }
+
     private final Context mContext;
     private final List<AlarmItemModel> mItems = new ArrayList<>();
     private OnAlarmToggleListener mToggleListener;
     private OnAlarmClickListener mClickListener;
+    private OnVacationBadgeClickListener mVacationBadgeClickListener;
 
     public AlarmListAdapter(Context context) {
         mContext = context;
@@ -67,6 +89,10 @@ public class AlarmListAdapter extends BaseAdapter {
 
     public void setOnAlarmClickListener(OnAlarmClickListener listener) {
         mClickListener = listener;
+    }
+
+    public void setOnVacationBadgeClickListener(OnVacationBadgeClickListener listener) {
+        mVacationBadgeClickListener = listener;
     }
 
     @Override
@@ -93,6 +119,8 @@ public class AlarmListAdapter extends BaseAdapter {
             holder.tvTime = convertView.findViewById(R.id.tv_alarm_time);
             holder.tvLabel = convertView.findViewById(R.id.tv_alarm_label);
             holder.tvRepeat = convertView.findViewById(R.id.tv_alarm_repeat);
+            holder.tvVacation = convertView.findViewById(R.id.tv_alarm_vacation);
+            holder.tvNapBadge = convertView.findViewById(R.id.tv_alarm_nap_badge);
             holder.swEnabled = convertView.findViewById(R.id.sw_alarm_enabled);
             convertView.setTag(holder);
         } else {
@@ -104,12 +132,34 @@ public class AlarmListAdapter extends BaseAdapter {
         holder.tvLabel.setText(item.label != null && !item.label.isEmpty() ? item.label : "Alarm");
 
         // Format recurrence summary
-        if (item.repeatMode == 2) {
+        if (item.isQuickNap) {
+            holder.tvRepeat.setText("Quick Nap");
+        } else if (item.repeatMode == 2) {
             holder.tvRepeat.setText("Statutory Workdays (法定工作日)");
         } else if (item.repeatMode == 0) {
             holder.tvRepeat.setText("Ring Once");
         } else {
             holder.tvRepeat.setText(formatDaysBitmask(item.daysBitmask));
+        }
+
+        // Render Vacation and Nap Badges
+        if (item.skippedDates != null && !item.skippedDates.isEmpty()) {
+            holder.tvVacation.setVisibility(View.VISIBLE);
+            holder.tvVacation.setText(String.format("Vacation (%d skipped)", item.skippedDates.size()));
+            holder.tvVacation.setOnClickListener(v -> {
+                if (mVacationBadgeClickListener != null) {
+                    mVacationBadgeClickListener.onVacationBadgeClick(item);
+                }
+            });
+        } else {
+            holder.tvVacation.setVisibility(View.GONE);
+            holder.tvVacation.setOnClickListener(null);
+        }
+
+        if (item.isQuickNap) {
+            holder.tvNapBadge.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvNapBadge.setVisibility(View.GONE);
         }
 
         // Avoid triggering listener during view recycling
@@ -141,10 +191,10 @@ public class AlarmListAdapter extends BaseAdapter {
 
     private String formatDaysBitmask(int bitmask) {
         if (bitmask == 0x7F) return "Every Day";
-        if (bitmask == 0x1F) return "Mon - Fri";
-        if (bitmask == 0x60) return "Weekends";
+        if (bitmask == 0x3E) return "Mon - Fri";
+        if (bitmask == 0x41) return "Weekends";
         StringBuilder sb = new StringBuilder();
-        String[] days = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+        String[] days = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
         for (int i = 0; i < 7; i++) {
             if ((bitmask & (1 << i)) != 0) {
                 if (sb.length() > 0) sb.append(", ");
@@ -158,6 +208,8 @@ public class AlarmListAdapter extends BaseAdapter {
         TextView tvTime;
         TextView tvLabel;
         TextView tvRepeat;
+        TextView tvVacation;
+        TextView tvNapBadge;
         Switch swEnabled;
     }
 }

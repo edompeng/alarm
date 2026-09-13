@@ -2,35 +2,86 @@ package com.edom.alarm;
 
 import android.app.Application;
 import android.content.Context;
-import android.os.Build;
+import android.content.Intent;
+import com.edom.alarm.core.scheduler.AlarmCapabilityEvaluator;
+import com.edom.alarm.core.scheduler.AlarmDeliveryModels.StoredAlarm;
+import com.edom.alarm.core.scheduler.AlarmRegistrationGateway;
+import com.edom.alarm.core.scheduler.AlarmRingingService;
+import com.edom.alarm.core.scheduler.AlarmScheduleReconciler;
+import com.edom.alarm.core.scheduler.AlarmScheduleStore;
+import com.edom.alarm.core.scheduler.AlarmSystemScheduler;
+import com.edom.alarm.core.scheduler.AlarmTriggerReceiver;
+import com.edom.alarm.core.scheduler.DefaultNextOccurrenceCalculator;
+import com.edom.alarm.core.scheduler.NextOccurrenceCalculator;
+import com.edom.alarm.core.scheduler.SharedPreferencesAlarmScheduleStore;
+import com.edom.alarm.ui.HolidaySyncManager;
+import java.time.ZoneId;
 
-/**
- * Main application context for Android Smart Alarm.
- * Initializes device-protected storage for Direct Boot compatibility.
- */
-public class AlarmApplication extends Application {
-
-    private static AlarmApplication sInstance;
-    private Context mDeviceProtectedContext;
+/** Process-wide composition root for credential-protected alarm delivery dependencies. */
+public final class AlarmApplication extends Application {
+    private AlarmScheduleStore alarmStore;
+    private NextOccurrenceCalculator nextOccurrenceCalculator;
+    private AlarmCapabilityEvaluator capabilityEvaluator;
+    private AlarmSystemScheduler registrationGateway;
+    private AlarmScheduleReconciler reconciler;
+    private AlarmTriggerReceiver.ServiceHandoff serviceHandoff;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        sInstance = this;
+        AlarmRingingService.ensureChannel(this);
+        alarmStore = new SharedPreferencesAlarmScheduleStore(this);
+        nextOccurrenceCalculator = new DefaultNextOccurrenceCalculator(
+                date -> HolidaySyncManager.isStatutoryWorkday(this, date.toString()));
+        capabilityEvaluator = new AlarmCapabilityEvaluator(this);
+        registrationGateway = new AlarmSystemScheduler(this, alarmStore, capabilityEvaluator);
+        reconciler = new AlarmScheduleReconciler(
+                alarmStore,
+                nextOccurrenceCalculator,
+                registrationGateway,
+                System::currentTimeMillis,
+                ZoneId::systemDefault);
+        serviceHandoff = alarm -> startForegroundService(createRingingIntent(alarm));
+    }
 
-        // Initialize Direct Boot protected context for accessing alarms before first unlock
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            mDeviceProtectedContext = createDeviceProtectedStorageContext();
-        } else {
-            mDeviceProtectedContext = this;
+    public static AlarmApplication from(Context context) {
+        Context application = context.getApplicationContext();
+        if (!(application instanceof AlarmApplication)) {
+            throw new IllegalStateException("AlarmApplication is not installed");
         }
+        return (AlarmApplication) application;
     }
 
-    public static AlarmApplication getInstance() {
-        return sInstance;
+    public AlarmScheduleStore alarmStore() {
+        return alarmStore;
     }
 
-    public Context getProtectedStorageContext() {
-        return mDeviceProtectedContext != null ? mDeviceProtectedContext : this;
+    public NextOccurrenceCalculator nextOccurrenceCalculator() {
+        return nextOccurrenceCalculator;
+    }
+
+    public AlarmCapabilityEvaluator capabilityEvaluator() {
+        return capabilityEvaluator;
+    }
+
+    public AlarmRegistrationGateway registrationGateway() {
+        return registrationGateway;
+    }
+
+    public AlarmScheduleReconciler reconciler() {
+        return reconciler;
+    }
+
+    public AlarmTriggerReceiver.ServiceHandoff serviceHandoff() {
+        return serviceHandoff;
+    }
+
+    private Intent createRingingIntent(StoredAlarm alarm) {
+        return new Intent(this, AlarmRingingService.class)
+                .setAction(AlarmRingingService.ACTION_START)
+                .putExtra(AlarmRingingService.EXTRA_ALARM_ID, alarm.id)
+                .putExtra(AlarmRingingService.EXTRA_OCCURRENCE_ID, alarm.occurrenceId)
+                .putExtra(AlarmRingingService.EXTRA_RINGTONE_URI, alarm.ringtoneUri)
+                .putExtra(AlarmRingingService.EXTRA_VIBRATE_ENABLED, alarm.vibrateEnabled);
     }
 }

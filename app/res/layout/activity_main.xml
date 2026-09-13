@@ -6,14 +6,70 @@
     android:background="@color/background"
     android:padding="16dp">
 
-    <TextView
+    <!-- Header with Title and Settings Button -->
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/app_name"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:text="@string/app_name"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary" />
+
+        <Button
+            android:id="@+id/btn_settings"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:padding="0dp"
+            android:text="⚙️"
+            android:textSize="18sp"
+            android:backgroundTint="#ECEFF1"
+            android:textColor="@color/text_primary" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/alarm_protection_warning"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:background="#FFF3E0"
+        android:importantForAccessibility="yes"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tv_alarm_protection_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:accessibilityLiveRegion="polite"
+            android:text="@string/alarm_protection_limited"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_alarm_protection_fix"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/alarm_protection_fix" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_alarm_protection_help"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:text="@string/alarm_protection_help"
+        android:textAllCaps="false" />
 
     <!-- Quick Nap Shortcuts Row -->
     <LinearLayout
@@ -59,7 +115,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="center"
-        android:text="No alarms configured.\nTap '+ Add Alarm' to set one."
+        android:text="@string/empty_alarms"
         android:textSize="16sp"
         android:textColor="@color/text_secondary"
         android:visibility="gone" />
@@ -78,7 +134,7 @@
         android:id="@+id/btn_add_alarm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="+ Add Alarm"
+        android:text="@string/add_alarm"
         android:backgroundTint="@color/primary"
         android:textColor="#FFFFFF" />
 

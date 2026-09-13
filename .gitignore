@@ -15,8 +15,15 @@ build/
 *.iml
 .idea/
 
-# OS
+# C++
+*.o
+*.so
+*.a
+
+# OS & Environment
 .DS_Store
 Thumbs.db
 *.swp
 *.tmp
+*.log
+.env*

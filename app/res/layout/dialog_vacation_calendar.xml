@@ -3,19 +3,21 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="12dp">
 
     <!-- Month Navigation Header -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="4dp">
 
         <Button
             android:id="@+id/btn_prev_month"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:layout_alignParentStart="true"
+            android:padding="0dp"
+            android:textSize="14sp"
             android:text="&lt;" />
 
         <TextView
@@ -24,29 +26,110 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:text="October 2026"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <Button
             android:id="@+id/btn_next_month"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:layout_alignParentEnd="true"
+            android:padding="0dp"
+            android:textSize="14sp"
             android:text="&gt;" />
     </RelativeLayout>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Deselect highlighted dates to skip alarm (取消高亮以跳过响铃):"
-        android:textSize="14sp"
-        android:layout_marginBottom="12dp" />
+        android:text="@string/select_dates_to_skip"
+        android:textSize="12sp"
+        android:layout_marginBottom="4dp" />
+
+    <!-- 7-Column Day-of-Week Header (Sun - Sat) -->
+    <LinearLayout
+        android:id="@+id/layout_calendar_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/sun"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_secondary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/mon"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_secondary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/tue"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_secondary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/wed"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_secondary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/thu"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_secondary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/fri"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_secondary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/sat"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_secondary" />
+    </LinearLayout>
 
     <!-- Calendar Grid of Days -->
     <GridView
         android:id="@+id/gv_calendar_days"
         android:layout_width="match_parent"
-        android:layout_height="240dp"
+        android:layout_height="140dp"
         android:numColumns="7"
         android:stretchMode="columnWidth"
         android:gravity="center" />
@@ -56,21 +139,33 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="end"
-        android:layout_marginTop="16dp">
+        android:gravity="center_vertical"
+        android:layout_marginTop="6dp">
+
+        <Button
+            android:id="@+id/btn_clear_calendar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/clear_skips"
+            android:textColor="#C62828" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
         <Button
             android:id="@+id/btn_cancel_calendar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Cancel"
+            android:text="@string/cancel"
             android:layout_marginEnd="8dp" />
 
         <Button
             android:id="@+id/btn_save_calendar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Save Skips"
+            android:text="@string/save_skips"
             android:backgroundTint="@color/primary"
             android:textColor="#FFFFFF" />
     </LinearLayout>

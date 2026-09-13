@@ -52,6 +52,43 @@
                 android:textSize="13sp"
                 android:textColor="@color/text_secondary" />
         </LinearLayout>
+
+        <!-- Badges Row for Vacation Mode & Quick Nap -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:id="@+id/tv_alarm_vacation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Vacation Mode"
+                android:textSize="12sp"
+                android:textColor="#E65100"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/tv_alarm_nap_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Quick Nap"
+                android:textSize="12sp"
+                android:textColor="#2E7D32"
+                android:textStyle="bold"
+                android:visibility="gone" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Right: Instant On/Off Toggle Switch -->

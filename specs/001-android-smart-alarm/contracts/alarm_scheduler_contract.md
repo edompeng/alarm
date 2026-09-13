@@ -6,7 +6,7 @@
 ---
 
 ## 1. Overview
-The `IAlarmScheduler` manages high-precision exact alarm registration, cancellation, next-occurrence resolution (taking into account recurrence rules, statutory holiday calendars, and temporary skips), and system reboot re-registration.
+The `IAlarmScheduler` manages next-occurrence resolution across recurrence rules, statutory holiday calendars, temporary skips, and snooze. Android framework registration, capability degradation, PendingIntent identity, ringing handoff, and recovery are defined by [alarm_delivery_contract.md](alarm_delivery_contract.md).
 
 ---
 
@@ -34,7 +34,8 @@ public interface IAlarmScheduler {
 
     /**
      * Reschedules all enabled alarms across the system.
-     * Invoked after device reboot, timezone change, clock change, or holiday database sync.
+     * Invoked after explicit application launch, device reboot, timezone/clock change,
+     * package replacement, exact-alarm capability recovery, or holiday database sync.
      */
     void rescheduleAllAlarms();
 
@@ -83,8 +84,18 @@ public interface IAlarmScheduler {
 
 | Action | Intent Extra Keys | Description |
 | :--- | :--- | :--- |
-| `com.edom.alarm.ACTION_ALARM_TRIGGER` | `EXTRA_ALARM_ID` (long) | Fired via AlarmClockInfo when the scheduled time arrives. Launches full-screen ringing UI. |
+| `com.edom.alarm.ACTION_ALARM_TRIGGER` | `EXTRA_ALARM_ID` (long), `EXTRA_OCCURRENCE_ID` (string), `EXTRA_TRIGGER_TIME` (long) | Canonical explicit broadcast operation fired by AlarmManager. Receiver validates persisted state and hands off to ringing execution/UI according to capability. |
 | `com.edom.alarm.ACTION_ADVANCE_NOTIFICATION` | `EXTRA_ALARM_ID` (long), `EXTRA_TRIGGER_TIME` (long) | Fired 30-60 min prior to alarm. Displays advance skip card. |
 | `com.edom.alarm.ACTION_SKIP_TODAY` | `EXTRA_ALARM_ID` (long) | Fired from the advance notification card button to dismiss the upcoming ring. |
 | `com.edom.alarm.ACTION_SNOOZE` | `EXTRA_ALARM_ID` (long) | Fired to trigger snooze. |
 | `com.edom.alarm.ACTION_DISMISS` | `EXTRA_ALARM_ID` (long) | Fired to terminate ringing and advance recurring schedule. |
+
+---
+
+## 4. Integration Invariants
+
+1. Domain next-occurrence calculation contains no Android framework dependency.
+2. Only the Android scheduler gateway defined in `alarm_delivery_contract.md` creates, replaces, or cancels AlarmManager operations.
+3. Schedule and cancel use identical PendingIntent identity; extras are validated payload, not identity.
+4. A recurring occurrence is not complete until its next valid occurrence is persisted/derived and registered.
+5. Best-effort registration returns an explicit delivery mode and MUST NOT be reported as exact/full protection.

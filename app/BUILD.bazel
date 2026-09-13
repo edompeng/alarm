@@ -2,6 +2,23 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
+# Keep Android application compilation and packaging inside the Bazel graph
+# without adding another build system or a new third-party rule dependency.
+genrule(
+    name = "alarm_debug_apk",
+    srcs = glob([
+        "res/**/*",
+        "src/**/*.java",
+    ]) + [
+        "AndroidManifest.xml",
+        "//core:android_java_sources",
+    ],
+    outs = ["alarm_debug_apk.apk"],
+    cmd = "$(location //scripts:build_apk.sh) --repo-root $$PWD --output $@",
+    tags = ["no-sandbox"],
+    tools = ["//scripts:build_apk.sh"],
+)
+
 cc_library(
     name = "app_native",
     srcs = glob(["src/**/*.cc"], allow_empty = True),
