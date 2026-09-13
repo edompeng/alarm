@@ -52,6 +52,18 @@
             android:text="60m" />
     </LinearLayout>
 
+    <!-- Empty State Placeholder -->
+    <TextView
+        android:id="@+id/tv_empty_alarms"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="No alarms configured.\nTap '+ Add Alarm' to set one."
+        android:textSize="16sp"
+        android:textColor="@color/text_secondary"
+        android:visibility="gone" />
+
     <!-- Alarms List -->
     <ListView
         android:id="@+id/lv_alarms"

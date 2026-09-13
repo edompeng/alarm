@@ -79,7 +79,8 @@ specs/001-android-smart-alarm/
 │   ├── holiday_engine_contract.md
 │   ├── audio_haptic_contract.md
 │   ├── challenge_engine_contract.md
-│   └── platform_adapter_contract.md  # Pure C++ cross-platform abstraction for iOS
+│   ├── platform_adapter_contract.md  # Pure C++ cross-platform abstraction for iOS
+│   └── alarm_ui_contract.md          # Standard TimePicker creation & card list UI
 └── checklists/
     └── requirements.md  # Quality validation checklist
 ```
@@ -113,14 +114,27 @@ data/
 app/
 ├── BUILD.bazel
 ├── AndroidManifest.xml
+├── res/
+│   ├── layout/
+│   │   ├── activity_main.xml
+│   │   ├── item_alarm_card.xml       # Alarm list card with large time and switch
+│   │   ├── dialog_alarm_edit.xml     # Native TimePicker & recurrence edit dialog
+│   │   ├── activity_ringing.xml
+│   │   └── dialog_vacation_calendar.xml
 ├── src/jni/alarm_jni_bridge.cc       # Android JNI adapter linking C++ engine
-└── src/com/edom/alarm/ui/            # Android UI & Services
+└── src/com/edom/alarm/ui/
+    ├── MainActivity.java             # Main activity hosting alarm list & (+) button
+    ├── AlarmListAdapter.java        # Custom adapter binding alarm items & switches
+    ├── AlarmEditDialog.java         # TimePicker creation & edit dialog
+    ├── RingingActivity.java
+    └── VacationCalendarDialog.java
 
 tests/
 ├── BUILD.bazel                       # Hermetic C++ unit test suites
 └── ...
 
 scripts/
+├── build_apk.sh                      # Standalone APK compilation & signing
 └── verify_emulator.sh                # Automated ADB E2E verification on emulator-5554
 ```
 
@@ -134,6 +148,7 @@ scripts/
 | :--- | :--- | :--- |
 | **Persistence** | Direct SQLite3 + Repository Pattern | Key-value stores cannot perform relational queries; heavy ORMs violate minimal APK size constraint. |
 | **Cross-Platform Boundary** | Pure C++ Abstract Platform Interfaces | C-style ABI lacks polymorphism; Flutter/React Native adds 20MB+ bloat and latency. |
+| **Standard Alarm UI** | Native `TimePicker` + Card List Adapter | Custom wheel views add external bloat; text input is error-prone and poor touch ergonomics. |
 | **Wakeup** | `AlarmManager.setAlarmClock()` + Full-Screen Intent | Standard `setExact()` throttled by Doze; `WorkManager` lacks exact-second guarantee. |
 | **Challenges** | Strategy Pattern (`IChallengeEngine`) | Hardcoding challenges into UI creates tight coupling and impedes modular testability. |
 | **Verification** | Automated ADB E2E Script on `emulator-5554` | Manual UI clicking is non-reproducible and error-prone; unit tests alone miss real Android runtime integration. |

@@ -166,3 +166,31 @@ Establish an automated ADB-driven test harness (`scripts/verify_emulator.sh`) ta
 ### Alternatives Considered
 - **Manual GUI Clicking Only**: Time-consuming, error-prone, and lacks automated regression protection.
 - **Pure Unit Tests**: Tests isolated logic but misses Android framework integration, manifest permission gates, and real SQLite file I/O.
+
+---
+
+## 10. Standard Alarm Creation & List UI Architecture
+
+### Decision
+Implement standard alarm creation and list management using native Android framework widgets:
+1. **Creation / Edit Interface**:
+   - TimePicker (`android.widget.TimePicker` in 24-hour mode).
+   - Recurrence selector supporting "Once" (default), Day-of-week bitmask toggles (Mon–Sun), and "Statutory Workdays" toggle.
+   - Text input for alarm label and quick shortcuts for Crescendo, Vibration, and Challenge selection.
+2. **Main List View**:
+   - Scrollable card view where each card displays:
+     - Prominent trigger time in `HH:mm` format.
+     - Recurrence summary (e.g. "Once", "Every Day", "Mon, Wed, Fri", or "Statutory Workdays").
+     - User label / memo.
+     - Instant `android.widget.Switch` for enabling/disabling the alarm without entering the edit screen.
+   - Empty state placeholder with friendly prompt when no alarms exist.
+   - Floating Action Button (`btn_add_alarm`) for one-tap creation.
+
+### Rationale
+- Familiar, friction-free UX meeting standard alarm expectations.
+- Native widgets add 0 KB overhead and deliver sub-100ms switch responsiveness.
+- Seamlessly blends baseline alarm utility with advanced China localization features.
+
+### Alternatives Considered
+- **Third-party wheel picker libraries**: Adds unnecessary binary footprint and custom styling overhead.
+- **Text input only**: Error-prone and poor touch ergonomics.

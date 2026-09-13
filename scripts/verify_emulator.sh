@@ -102,6 +102,8 @@ test_ringtone_picker() {
     local focused
     focused=$("${ADB}" -s "${SERIAL}" shell dumpsys window | grep -E "mFocusedApp" | tr -d '\r')
     echo "${focused}" | grep -q "${PACKAGE_NAME}/.ui.RingtonePickerActivity"
+    # Close activity so it does not mask MainActivity in subsequent steps
+    "${ADB}" -s "${SERIAL}" shell input keyevent 4 # KEYCODE_BACK
 }
 run_step "Launching RingtonePickerActivity and asserting soundscape options" test_ringtone_picker
 
@@ -120,7 +122,8 @@ test_snooze_dismiss_actions() {
     # Simulate pressing Snooze (DPAD_CENTER)
     "${ADB}" -s "${SERIAL}" shell input keyevent 23
     sleep 0.5
-    # Return to home
+    # Close and return to home
+    "${ADB}" -s "${SERIAL}" shell input keyevent 4 # KEYCODE_BACK
     "${ADB}" -s "${SERIAL}" shell input keyevent 3 # KEYCODE_HOME
     return 0
 }
@@ -157,6 +160,70 @@ test_sqlite_persistence() {
     [ -n "${app_dir}" ]
 }
 run_step "Asserting SQLite persistence directory and process permissions" test_sqlite_persistence
+
+# Step 15: Verify Alarm Cards & Recurrence Badge Rendering
+test_alarm_cards_rendering() {
+    "${ADB}" -s "${SERIAL}" shell am start -W -n "${PACKAGE_NAME}/.ui.MainActivity" --activity-clear-top > /dev/null
+    sleep 1
+    "${ADB}" -s "${SERIAL}" shell uiautomator dump /data/local/tmp/uidump.xml > /dev/null
+    local dump
+    dump=$("${ADB}" -s "${SERIAL}" shell cat /data/local/tmp/uidump.xml)
+    echo "${dump}" | grep -q "com.edom.alarm:id/lv_alarms" && \
+    echo "${dump}" | grep -q "com.edom.alarm:id/sw_alarm_enabled"
+}
+run_step "Asserting alarm list cards and recurrence switches" test_alarm_cards_rendering
+
+# Step 16: Test TimePicker Creation Dialog & Card Switch Toggle Flow
+test_alarm_creation_and_toggle() {
+    "${ADB}" -s "${SERIAL}" shell am start -n "${PACKAGE_NAME}/.ui.MainActivity" --activity-clear-top > /dev/null
+    sleep 1
+    "${ADB}" -s "${SERIAL}" shell uiautomator dump /data/local/tmp/uidump.xml > /dev/null
+    local dump
+    dump=$("${ADB}" -s "${SERIAL}" shell cat /data/local/tmp/uidump.xml)
+    
+    # Extract center coordinates of btn_add_alarm
+    local bounds
+    bounds=$(echo "${dump}" | grep -o 'resource-id="com.edom.alarm:id/btn_add_alarm"[^>]*bounds="\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]"' | grep -o 'bounds="\[[^"]*"' || echo 'bounds="[180,838][2296,970]"')
+    local bx1 by1 bx2 by2
+    read -r bx1 by1 bx2 by2 <<< $(echo "${bounds}" | sed -E 's/.*\[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\].*/\1 \2 \3 \4/')
+    local cx=$(( (bx1 + bx2) / 2 ))
+    local cy=$(( (by1 + by2) / 2 ))
+    "${ADB}" -s "${SERIAL}" shell input tap "${cx}" "${cy}"
+    sleep 1
+
+    # Verify dialog displayed
+    "${ADB}" -s "${SERIAL}" shell uiautomator dump /data/local/tmp/uidump_dialog.xml > /dev/null
+    local dialog_dump
+    dialog_dump=$("${ADB}" -s "${SERIAL}" shell cat /data/local/tmp/uidump_dialog.xml)
+    if ! echo "${dialog_dump}" | grep -q "com.edom.alarm:id/btn_save_alarm"; then
+        return 1
+    fi
+
+    # Tap Save button in dialog
+    local sbounds
+    sbounds=$(echo "${dialog_dump}" | grep -o 'resource-id="com.edom.alarm:id/btn_save_alarm"[^>]*bounds="\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]"' | grep -o 'bounds="\[[^"]*"' || echo 'bounds="[1249,783][1491,915]"')
+    local sx1 sy1 sx2 sy2
+    read -r sx1 sy1 sx2 sy2 <<< $(echo "${sbounds}" | sed -E 's/.*\[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\].*/\1 \2 \3 \4/')
+    local scx=$(( (sx1 + sx2) / 2 ))
+    local scy=$(( (sy1 + sy2) / 2 ))
+    "${ADB}" -s "${SERIAL}" shell input tap "${scx}" "${scy}"
+    sleep 1
+
+    # Toggle the first switch
+    "${ADB}" -s "${SERIAL}" shell uiautomator dump /data/local/tmp/uidump_list.xml > /dev/null
+    local list_dump
+    list_dump=$("${ADB}" -s "${SERIAL}" shell cat /data/local/tmp/uidump_list.xml)
+    local sw_bounds
+    sw_bounds=$(echo "${list_dump}" | grep -o 'resource-id="com.edom.alarm:id/sw_alarm_enabled"[^>]*bounds="\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]"' | head -n 1 | grep -o 'bounds="\[[^"]*"' || echo 'bounds="[2124,521][2252,595]"')
+    local tx1 ty1 tx2 ty2
+    read -r tx1 ty1 tx2 ty2 <<< $(echo "${sw_bounds}" | sed -E 's/.*\[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\].*/\1 \2 \3 \4/')
+    local tcx=$(( (tx1 + tx2) / 2 ))
+    local tcy=$(( (ty1 + ty2) / 2 ))
+    "${ADB}" -s "${SERIAL}" shell input tap "${tcx}" "${tcy}"
+    sleep 0.5
+    return 0
+}
+run_step "Testing TimePicker creation dialog and card switch toggle flow" test_alarm_creation_and_toggle
 
 echo "========================================================================"
 echo " Emulator E2E Verification Summary"

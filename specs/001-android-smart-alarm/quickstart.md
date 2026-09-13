@@ -88,6 +88,15 @@ adb shell am start -n com.edom.alarm/.ui.MainActivity
 4. Lift the device: Volume attenuates immediately to ambient background level.
 5. Place device face down: Alarm transitions instantly into Snooze mode.
 
+### Scenario D: Standard Alarm Creation with TimePicker & List Management
+1. Launch the app and tap the Add Alarm button (`+`).
+2. In the creation dialog, adjust the native TimePicker to `07:15`, leave repeat set to "Ring Once" (default), enter label "Morning Standup", and tap Save.
+3. Observe: Toast appears showing delta: "Alarm will ring in X hours, Y minutes".
+4. Observe: Alarm card appears in the main list displaying `07:15`, label "Morning Standup", "Once", and the switch is ON.
+5. Tap the switch to toggle OFF: Toast indicates alarm cancelled, switch updates to OFF.
+6. Tap the switch to toggle ON: Alarm recalculates next trigger and reschedules.
+7. Long-press the card and tap Delete: Alarm is permanently removed from the database and list.
+
 ---
 
 ## 6. Automated Android Emulator Verification (`emulator-5554`)

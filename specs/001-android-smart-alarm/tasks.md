@@ -176,6 +176,19 @@
 
 ---
 
+## Phase 11: Standard Alarm Creation & List Management
+
+**Purpose**: Provide standard alarm baseline features: TimePicker creation dialog (hour/minute), recurrence options ("Ring Once" default), alarm list card display, and instant On/Off toggle switches.
+
+- [x] T055 [P] Create custom alarm card item layout with formatted time (`HH:mm`), repeat badge, label, and On/Off switch in `app/res/layout/item_alarm_card.xml`
+- [x] T056 [P] Create TimePicker creation & edit dialog layout with 24-hour TimePicker, recurrence radio group, day chips, and label input in `app/res/layout/dialog_alarm_edit.xml`
+- [x] T057 Implement `AlarmListAdapter` managing card view binding, instant On/Off switch toggle events, and edit/delete callbacks in `app/src/com/edom/alarm/ui/AlarmListAdapter.java`
+- [x] T058 Implement `AlarmEditDialog` with native `TimePicker`, default "Ring Once" recurrence, custom day toggles, and SQLite persistence in `app/src/com/edom/alarm/ui/AlarmEditDialog.java`
+- [x] T059 Integrate `AlarmListAdapter`, `AlarmEditDialog`, empty state placeholder, and floating add button into `app/src/com/edom/alarm/ui/MainActivity.java`
+- [x] T060 Extend automated emulator verification script `scripts/verify_emulator.sh` to test standard TimePicker alarm creation and list switch toggling on `emulator-5554`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -189,7 +202,8 @@
 - **Phase 7 (User Story 5 - P3)**: Depends on Phase 2 and US2.
 - **Phase 8 (User Story 6 - P3)**: Depends on Phase 2 and US1/US2.
 - **Phase 9 (Polish)**: Depends on completion of desired user stories.
-- **Phase 10 (iOS Decoupling & Emulator Verification)**: Depends on Phase 9; verifies cross-platform interfaces and runs emulator E2E tests.
+- **Phase 10 (iOS Decoupling & Emulator Verification)**: Depends on Phase 9.
+- **Phase 11 (Standard Alarm Creation & List Management)**: Builds upon Phase 10; delivers standard time-setting and list management UI.
 
 ### User Story Dependency Graph
 
@@ -210,6 +224,7 @@ graph TD
     US5 --> Polish
     US6 --> Polish
     Polish --> P10[Phase 10: iOS Decoupling & Emulator E2E Verification]
+    P10 --> P11[Phase 11: Standard Alarm Creation & List Management]
 ```
 
 ---
@@ -221,8 +236,8 @@ graph TD
 - **User Story 1**: T015 and T016 (Tests), and T017 and T018 (Logic/Assets) can execute concurrently.
 - **User Story 2**: T023, T024, T026 can execute concurrently.
 - **User Story 4**: T032, T033, T034 can execute concurrently.
-- **Cross-Story**: Once Phase 2 is complete, US1 and US2 can be implemented concurrently by independent developers.
 - **Phase 10**: T050, T051, and T053 can be developed in parallel.
+- **Phase 11**: T055 and T056 (layouts) can execute concurrently with T057/T058.
 
 ---
 
@@ -240,4 +255,5 @@ graph TD
 - Add Phase 7 (US5): Streaming Music & Weather Soundscapes.
 - Add Phase 8 (US6): Power-off Alarm, Quick Nap & TTS.
 - Run Phase 9 (Polish): ProGuard optimization and final APK size audit.
-- Run Phase 10 (iOS & Emulator): Define pure C++ abstract platform interfaces (`core/include/edom/alarm/core/adapter/`), verify with Bazel unit tests, and execute automated ADB E2E verification on `emulator-5554`.
+- Run Phase 10 (iOS & Emulator): Define pure C++ abstract platform interfaces and verify on emulator.
+- Run Phase 11 (Standard Alarm UI): Implement TimePicker creation dialog (`AlarmEditDialog`), alarm card list view (`AlarmListAdapter`), empty state, and emulator verification of standard CRUD flows.

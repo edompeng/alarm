@@ -13,6 +13,8 @@
 ### Session 2026-09-13
 - Q: How should the core architecture decouple platform capabilities so that both Android and a future iOS app can share the business engine? → A: Pure C++ abstract platform interfaces (`IPlatformScheduler`, `IPlatformAudio`, `IPlatformHaptics`, `IPlatformSensor`) implemented natively by Android (via JNI) and iOS (via Objective-C++/Swift), maximizing code reuse with zero external runtime overhead.
 - Q: How should the end-to-end functional verification be executed and validated on the active local Android emulator? → A: Automated ADB-driven E2E verification script that exercises UI journeys, simulates sensor and alarm events, and validates live SQLite database state on the local Android emulator (`emulator-5554`).
+- Q: How should the standard alarm creation and list management interactions be structured in the user interface? → A: Main screen shows a scrollable card list of all created alarms with formatted time (HH:mm), recurrence summary, custom label, and an instant On/Off toggle switch; tapping the Add button (`+`) or an existing alarm opens a dedicated edit screen with standard time picker (hour/minute), recurrence selector, and label field.
+- Q: When adding an alarm, what should be the default recurrence mode and behavior if the user only sets the time (hour and minute)? → A: "Ring Once" by default (rings on the next upcoming occurrence of the configured time, then automatically switches to Off after ringing); recurrence (Daily, Custom Days, or Statutory Workdays) is activated only when selected.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -199,6 +201,9 @@ Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, ki
 - **FR-031**: System MUST be optimized to run with minimal battery consumption, low idle memory footprint, and compact installation package size.
 - **FR-032**: System architecture MUST decouple core business logic, holiday evaluation, and SQLite persistence from platform-specific APIs via abstract C++ platform interfaces (`IPlatformScheduler`, `IPlatformAudio`, `IPlatformHaptics`, `IPlatformSensor`), providing ready extensibility for future iOS application implementations.
 - **FR-033**: System MUST support automated end-to-end functional verification on a local Android emulator (API 30+) using an ADB-driven harness that automates UI journeys, simulates sensor/time triggers, and verifies SQLite persistence state.
+- **FR-034**: System MUST display all configured alarms in a scrollable list on the main screen, where each alarm card presents the formatted trigger time (HH:mm), recurrence summary, custom label, and an instant On/Off toggle switch.
+- **FR-035**: System MUST provide a dedicated alarm creation and editing interface featuring a standard time picker for hour and minute selection, recurrence configuration (once, specific days of week, or statutory workdays), label text entry, and delete capability.
+- **FR-036**: System MUST default new alarms to "Ring Once" mode when no repeat days are selected; upon completing ringing or dismissal of a "Ring Once" alarm, the system MUST automatically transition the alarm's state to disabled (Off).
 
 ---
 
@@ -233,6 +238,7 @@ Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, ki
 - **SC-008**: User task completion rate for configuring multi-day vacation skip exceeds 95% on the first attempt without user error.
 - **SC-009**: 100% of core domain models, holiday calculations, and SQLite data access logic are isolated behind pure C++ interfaces with zero Android runtime dependencies, enabling direct compilation and reuse on iOS.
 - **SC-010**: 100% of end-to-end functional journeys (creation, statutory calculation, advance skip, challenge resolution, and persistence) pass successfully in the automated ADB verification suite executed against the local Android emulator.
+- **SC-011**: 100% of newly created alarms appear immediately in the main alarm list in chronological order, and toggling an alarm's On/Off switch updates its system schedule state in under 100 milliseconds.
 
 ---
 
