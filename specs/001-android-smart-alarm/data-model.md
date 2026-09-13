@@ -29,6 +29,8 @@ erDiagram
         text ringtone_type "LOCAL, STREAMING, WEATHER"
         text ringtone_uri "URI of selected track or soundscape"
         text ringtone_fallback_uri "Local fallback audio URI"
+        integer vibrate_enabled "1 = vibrate enabled, 0 = silent"
+        integer is_quick_nap "1 = temporary quick nap, 0 = standard alarm"
         integer snooze_interval_minutes "Snooze duration (1-60)"
         integer snooze_max_count "Allowed snooze times (0, 1, 3, 5, -1=infinite)"
         text challenge_type "NONE, MATH, SHAKE"
@@ -79,10 +81,12 @@ CREATE TABLE IF NOT EXISTS alarms (
     crescendo_seconds INTEGER NOT NULL DEFAULT 15 CHECK (crescendo_seconds >= 0 AND crescendo_seconds <= 30),
     vibration_pattern TEXT NOT NULL DEFAULT 'HEARTBEAT',
     vibration_intensity INTEGER NOT NULL DEFAULT 80 CHECK (vibration_intensity >= 0 AND vibration_intensity <= 100),
+    vibrate_enabled INTEGER NOT NULL DEFAULT 1 CHECK (vibrate_enabled IN (0, 1)),
     force_speaker INTEGER NOT NULL DEFAULT 1 CHECK (force_speaker IN (0, 1)),
     ringtone_type TEXT NOT NULL DEFAULT 'LOCAL',
     ringtone_uri TEXT NOT NULL DEFAULT 'content://settings/system/alarm_alert',
     ringtone_fallback_uri TEXT NOT NULL DEFAULT 'android.resource://system/alarm_beep',
+    is_quick_nap INTEGER NOT NULL DEFAULT 0 CHECK (is_quick_nap IN (0, 1)),
     snooze_interval_minutes INTEGER NOT NULL DEFAULT 10 CHECK (snooze_interval_minutes >= 1 AND snooze_interval_minutes <= 60),
     snooze_max_count INTEGER NOT NULL DEFAULT 3,
     challenge_type TEXT NOT NULL DEFAULT 'NONE',
@@ -146,7 +150,9 @@ stateDiagram-v2
     ChallengeActive --> Dismissed: Challenge successfully passed
     Ringing --> Dismissed: User dismisses alarm directly
     Dismissed --> Scheduled: If recurring (Workday/Custom Days)
-    Dismissed --> Disabled: If one-off (repeat_mode = Once)
+    Dismissed --> Disabled: If standard one-off (repeat_mode = Once)
+    Dismissed --> [*]: If is_quick_nap = 1 (Auto-destroyed)
+    Scheduled --> [*]: If is_quick_nap = 1 and user toggles Off
 ```
 
 ---
@@ -158,8 +164,9 @@ stateDiagram-v2
    - `0 <= minute <= 59`
    - `next_trigger_time` must always be calculated as epoch milliseconds in the future relative to the moment of scheduling.
 2. **Repeat Modes**:
-   - `repeat_mode = 0` (Once): Upon dismissal or single skip, `is_enabled` transitions to `0`.
+   - `repeat_mode = 0` (Once): Upon dismissal or single skip, `is_enabled` transitions to `0` for standard alarms; for `is_quick_nap = 1`, the entry is immediately purged.
    - `repeat_mode = 1` (Custom Days): `days_bitmask` must have at least one bit set ($1 \le \text{bitmask} \le 127$).
    - `repeat_mode = 2` (Statutory Workdays): `next_trigger_time` must be resolved by querying `holiday_calendar` to skip dates with `day_type = 2` (Statutory Holiday) and include dates with `day_type = 3` (Compensatory Workday).
 3. **Skip Rule Deletion**:
    - Expired `alarm_skip_rules` (`skip_date < CURRENT_DATE`) are automatically purged upon alarm database maintenance checks to conserve storage.
+

@@ -194,3 +194,49 @@ Implement standard alarm creation and list management using native Android frame
 ### Alternatives Considered
 - **Third-party wheel picker libraries**: Adds unnecessary binary footprint and custom styling overhead.
 - **Text input only**: Error-prone and poor touch ergonomics.
+
+---
+
+## 11. Long-Press Context Menu & Monthly Calendar Skip Management
+
+### Decision
+1. **Long-Press Menu Flow**:
+   - Long-pressing any alarm card opens a contextual dialog offering three distinct operations:
+     - **"Skip Dates / Vacation Mode" (跳过日期 / 休假模式)**
+     - **"Edit Alarm" (编辑闹钟)**
+     - **"Delete Alarm" (删除闹钟)**
+2. **Monthly Calendar Date Picker**:
+   - Selecting "Skip Dates" launches `VacationCalendarDialog`.
+   - Displays a calendar grid for the selected month with month/year navigation controls.
+   - Users can tap specific dates to toggle/cancel alarm reminders.
+   - Persists a set of skipped dates formatted as ISO-8601 strings (`YYYY-MM-DD`) attached to that alarm.
+3. **Status Badging & Trigger Suppression**:
+   - When skipped dates exist, the alarm card displays an active status badge (e.g., `"Vacation Mode (X days skipped)"`).
+   - When the scheduled time arrives, the scheduling engine evaluates whether the current calendar date matches an entry in the alarm's skipped dates set:
+     - If matched, ringing is suppressed for that day, and the scheduler advances directly to the subsequent cycle.
+     - If not matched, the alarm rings normally.
+
+### Rationale
+- Replaces raw deletion on long-press with a user-friendly contextual menu.
+- Empowers users to handle vacation periods and shifts without altering their underlying recurrence schedule.
+
+---
+
+## 12. System AlarmManager Scheduling, Quick Nap Lifecycle & Per-Alarm Audio/Haptics
+
+### Decision
+1. **System AlarmManager Integration**:
+   - When alarms are created, toggled, or modified in `MainActivity`, calculate the precise upcoming epoch trigger timestamp.
+   - Invoke `AlarmManager.setAlarmClock(new AlarmManager.AlarmClockInfo(triggerMillis, showPendingIntent), alarmPendingIntent)`.
+   - Automatically cancel pending intents when an alarm is toggled Off or deleted.
+   - `AlarmTriggerReceiver` handles `ACTION_ALARM_TRIGGER`, checks skip rules, acquires WakeLock, routes audio through `STREAM_ALARM` with crescendo ramp, triggers linear haptics, and launches `RingingActivity` via `fullScreenIntent`.
+2. **Quick Nap Lifecycle in Main List**:
+   - Tapping 15m, 30m, 45m, or 60m instantly creates an active alarm card in `MainActivity` with time set to `now + N minutes`, labeled `"Quick Nap (Nm)"`, and flagged with `isQuickNap = true`.
+   - The card displays dynamic remaining countdown and an exclusive Quick Nap badge.
+   - Upon alarm trigger completion, user dismissal, or manual switch toggle Off, the quick nap alarm automatically self-destructs and removes itself from the list and persistent storage.
+3. **Per-Alarm Ringtone & Vibration Configuration**:
+   - In `AlarmEditDialog`, provide dedicated rows for "Ringtone" and "Vibration".
+   - Tapping Ringtone invokes Android's native system `RingtoneManager` (`ACTION_RINGTONE_PICKER` with `TYPE_ALARM`) for choosing system alarm tones, defaulting to system default if unassigned.
+   - Vibration provides an independent `Switch` toggle controlling whether haptic feedback is triggered.
+   - `AlarmItemModel` and persistent JSON store `ringtoneUri` and `vibrateEnabled` fields per alarm.
+

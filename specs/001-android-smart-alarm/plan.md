@@ -8,7 +8,7 @@
 
 ### Summary
 
-Deliver a lightweight, ultra-reliable, China-localized Android Alarm Clock application built with Bazel, architected with a decoupled cross-platform C++ engine ready for future iOS porting. The technical approach centers on zero-external-bloat architecture: direct SQLite3 for high-performance zero-dependency persistence, pure C++ abstract platform interfaces (`IPlatformScheduler`, `IPlatformAudio`, `IPlatformHaptics`, `IPlatformSensor`) decoupling the business engine from OS details, Android JNI bridge linking to Java/Android UI, Android `AlarmManager.setAlarmClock()` and Full-Screen Intents for guaranteed Doze-penetrating wakeups, and automated end-to-end verification executed on the local Android emulator (`emulator-5554`).
+Deliver a lightweight, ultra-reliable, China-localized Android Alarm Clock application built with Bazel, architected with a decoupled cross-platform C++ engine ready for future iOS porting. The technical approach centers on zero-external-bloat architecture: direct SQLite3 for high-performance zero-dependency persistence, pure C++ abstract platform interfaces (`IPlatformScheduler`, `IPlatformAudio`, `IPlatformHaptics`, `IPlatformSensor`) decoupling the business engine from OS details, Android JNI bridge linking to Java/Android UI, real Android `AlarmManager.setAlarmClock()` system wakeup dispatch with Full-Screen Intents for guaranteed Doze-penetrating alerts, contextual long-press calendar skip management (`VacationCalendarDialog`), in-list Quick Nap cards with self-destruct lifecycle, per-alarm native `RingtoneManager` sound and vibration customization, and automated end-to-end verification executed on the local Android emulator (`emulator-5554`).
 
 ---
 
@@ -151,4 +151,6 @@ scripts/
 | **Standard Alarm UI** | Native `TimePicker` + Card List Adapter | Custom wheel views add external bloat; text input is error-prone and poor touch ergonomics. |
 | **Wakeup** | `AlarmManager.setAlarmClock()` + Full-Screen Intent | Standard `setExact()` throttled by Doze; `WorkManager` lacks exact-second guarantee. |
 | **Challenges** | Strategy Pattern (`IChallengeEngine`) | Hardcoding challenges into UI creates tight coupling and impedes modular testability. |
+| **Vacation Skip** | `VacationCalendarDialog` + Per-Alarm Date Set | Static skip toggles cannot handle irregular shifts; cloud sync adds network dependencies. |
+| **Ringtone & Vibration** | Native `RingtoneManager` + Android `Vibrator` | Bundling multi-megabyte sound libraries inflates APK; system picker gives full user device custom sounds. |
 | **Verification** | Automated ADB E2E Script on `emulator-5554` | Manual UI clicking is non-reproducible and error-prone; unit tests alone miss real Android runtime integration. |

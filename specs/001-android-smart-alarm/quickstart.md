@@ -97,6 +97,25 @@ adb shell am start -n com.edom.alarm/.ui.MainActivity
 6. Tap the switch to toggle ON: Alarm recalculates next trigger and reschedules.
 7. Long-press the card and tap Delete: Alarm is permanently removed from the database and list.
 
+### Scenario E: Long-Press Calendar Skip, Quick Nap In-List Lifecycle & System AlarmManager
+1. **Quick Nap In-List Lifecycle**:
+   - Tap the `15m` nap button on the dashboard.
+   - Observe: A new alarm card labeled `Quick Nap (15m)` appears immediately in the list with active countdown and switch ON.
+   - Toggle switch OFF or dismiss after ringing: The card automatically destroys itself from the list and storage.
+2. **Long-Press Calendar Skip (Vacation Mode)**:
+   - Long-press any recurring alarm card -> context menu appears with "Skip Dates / Vacation Mode", "Edit Alarm", and "Delete Alarm".
+   - Select "Skip Dates / Vacation Mode" -> `VacationCalendarDialog` opens with a monthly grid.
+   - Tap dates to toggle/cancel alarm reminders -> save -> observe card displays `"Vacation Mode (X days skipped)"`.
+   - On skipped dates, ringing is completely suppressed and advances to next cycle.
+3. **Per-Alarm Ringtone & Vibration**:
+   - Open edit dialog for an alarm -> tap Ringtone to select system alarm sound via native `RingtoneManager` -> toggle Vibrate switch -> save.
+   - When alarm triggers, it plays the selected ringtone and vibrates according to the per-alarm toggle.
+4. **Real System AlarmManager Wakeup**:
+   - Set an alarm for 1 minute in the future.
+   - Lock screen or send app to background.
+   - Observe: Android system status bar displays alarm clock icon.
+   - When time arrives: CPU wakes via WakeLock, `STREAM_ALARM` audio plays with crescendo, and `RingingActivity` appears full-screen over the lockscreen.
+
 ---
 
 ## 6. Automated Android Emulator Verification (`emulator-5554`)

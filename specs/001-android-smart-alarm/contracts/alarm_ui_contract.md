@@ -29,13 +29,34 @@ Defines the contract between the UI presentation layer, user interactions, and t
 
 | Element ID | View Type | Behavior / Data Binding |
 |:---|:---|:---|
-| `time_picker` | `TimePicker` | Native Android TimePicker (set to 24-hour mode), initialized with alarm hour and minute |
+| `tp_time` | `TimePicker` | Native Android TimePicker (set to 24-hour mode), initialized with alarm hour and minute |
 | `et_alarm_label` | `EditText` | Single-line text input for custom alarm label |
 | `rg_repeat_mode` | `RadioGroup` | Mode selector: "Once", "Custom Days", "Statutory Workdays" |
-| `layout_days_selector` | `ViewGroup` | 7 toggle chips (Mon through Sun) visible when "Custom Days" is selected |
-| `btn_save_alarm` | `Button` | Persists alarm record to SQLite database, recalculates next trigger time, schedules exact alarm, and updates main list |
+| `layout_custom_days` | `ViewGroup` | 7 toggle chips (Mon through Sun) visible when "Custom Days" is selected |
+| `tv_ringtone_name` | `TextView` | Displays current ringtone name (or "Default Alarm Sound") |
+| `btn_pick_ringtone`| `Button` | Launches native Android `RingtoneManager.ACTION_RINGTONE_PICKER` (`TYPE_ALARM`) |
+| `sw_alarm_vibrate` | `Switch` | Controls `vibrate_enabled` state for this specific alarm |
+| `btn_save_alarm` | `Button` | Persists alarm record, schedules `AlarmManager.setAlarmClock()`, and updates main list |
 | `btn_delete_alarm` | `Button` | Visible when editing existing alarm: removes record and cancels active schedule |
 | `btn_cancel_alarm` | `Button` | Dismisses dialog without persisting changes |
+
+### 2.3 Long-Press Context Menu & Vacation Mode
+
+- **Trigger**: Long-press on any alarm card in `AlarmListAdapter`.
+- **Options**:
+  1. **"Skip Dates / Vacation Mode" (跳过日期 / 休假模式)**: Launches `VacationCalendarDialog`, populated with any existing skipped dates for the alarm. Allows toggling/canceling alarm alerts for specific calendar dates. Card displays an active `"Vacation Mode (X days skipped)"` badge.
+  2. **"Edit Alarm" (编辑闹钟)**: Opens `AlarmEditDialog` for modifying time, label, recurrence, ringtone, or vibration.
+  3. **"Delete Alarm" (删除闹钟)**: Displays confirmation dialog to permanently remove the alarm.
+
+### 2.4 Quick Nap Alarms (`btn_nap_15`, `btn_nap_30`, `btn_nap_45`, `btn_nap_60`)
+
+- **Trigger**: Tapping a Quick Nap preset on the main dashboard.
+- **Behavior**:
+  - Immediately creates an active alarm card with trigger time = `current time + N minutes`.
+  - Tagged with `is_quick_nap = 1`, `repeat_mode = Once`, label = `"Quick Nap (Nm)"`.
+  - Scheduled via `AlarmManager.setAlarmClock()`.
+  - Card displays dynamic remaining countdown badge.
+  - **Self-Destruct Lifecycle**: Upon alarm ringing completion, user dismissal, or manual toggle Off, the alarm card is automatically purged and deleted from the list and persistent storage.
 
 ---
 
@@ -49,16 +70,27 @@ Defines the contract between the UI presentation layer, user interactions, and t
      │                                    User edits & taps Save
      │                                            │
      │                                            ▼
-     │                                 Persist to SQLite Repository
+     │                                 Persist to SQLite / SharedPreferences
      │                                            │
-     │                                 Schedule exact AlarmManager
+     │                                 Register AlarmManager.setAlarmClock()
      │                                            │
-     ◄───────────────────────────────── Refresh Alarm List Cards
+     │                                 Show Toast: "Rings in X hrs, Y min"
+     │                                            │
+     │                                 Refresh Alarm List Cards
      │
-     ├── Taps Card Switch (On/Off) ─────► Toggle is_enabled in SQLite
+     ├── Taps Quick Nap (15m/30m/...) ──► Calculate time = now + N min
      │                                            │
-     │                                    If ON:  scheduleAlarm()
-     │                                    If OFF: cancelAlarm()
-     │                                            │
-     ◄───────────────────────────────── Show Toast: "Rings in X hrs, Y min"
+     │                                 Create active card (is_quick_nap = 1)
+     │                                 Register AlarmManager.setAlarmClock()
+     │                                 Auto-destruct on dismiss/cancel
+     │
+     ├── Long-Press Alarm Card ─────────► Context Menu:
+     │                                      ├── [Skip Dates] ──► VacationCalendarDialog
+     │                                      ├── [Edit]       ──► AlarmEditDialog
+     │                                      └── [Delete]     ──► Confirm & Delete
+     │
+     └── Taps Card Switch (On/Off) ─────► Toggle is_enabled state
+                                                  │
+                                          If ON:  setAlarmClock()
+                                          If OFF: cancelAlarm() & if nap, purge card
 ```
