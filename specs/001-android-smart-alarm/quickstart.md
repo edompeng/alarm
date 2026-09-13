@@ -87,3 +87,25 @@ adb shell am start -n com.edom.alarm/.ui.MainActivity
 3. When alarm fires: Sound erupts directly from the **phone's built-in speaker**, smoothly ramping from silent to full volume over 15 seconds, and motor pulses in Heartbeat rhythm.
 4. Lift the device: Volume attenuates immediately to ambient background level.
 5. Place device face down: Alarm transitions instantly into Snooze mode.
+
+---
+
+## 6. Automated Android Emulator Verification (`emulator-5554`)
+
+To execute full end-to-end automated verification against the local Android emulator:
+
+```bash
+# 1. Ensure emulator-5554 is attached and ready
+/opt/homebrew/bin/adb -s emulator-5554 wait-for-device
+
+# 2. Run the automated E2E emulator test suite
+./scripts/verify_emulator.sh emulator-5554
+```
+
+### Automated Verification Pipeline Coverage:
+- **Package Deployment**: Installs debug/release APK, verifies zero native crash or missing symbol errors.
+- **Permission Grant**: Pre-grants `POST_NOTIFICATIONS` and verifies exact alarm privileges (`SCHEDULE_EXACT_ALARM`).
+- **UI & Lifecycle Activation**: Launches `MainActivity`, simulates setting an alarm, tests quick-nap trigger.
+- **SQLite Database Integrity**: Queries internal SQLite database to assert table schema, holiday records, and alarm configurations.
+- **Background Alarm Firing**: Simulates trigger intent via `adb shell am broadcast` to verify `RingingActivity` launch and audio-haptic service activation.
+- **Gesture/Challenge Completion**: Injects shake count broadcasts and verifies clean dismissal and next-alarm rescheduling.

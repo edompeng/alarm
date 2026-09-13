@@ -164,6 +164,18 @@
 
 ---
 
+## Phase 10: Cross-Platform iOS Extensibility & Local Emulator Verification
+
+**Purpose**: Implement pure C++ abstract platform interfaces for future iOS application porting and automated ADB-driven end-to-end verification on `emulator-5554`.
+
+- [x] T050 [P] Define pure C++ abstract platform interfaces (`i_platform_scheduler.h`, `i_platform_audio.h`, `i_platform_haptics.h`, `i_platform_sensor.h`) in `core/include/edom/alarm/core/adapter/`
+- [x] T051 [P] Implement C++ mock platform adapters and unit test suite in `tests/core/platform_adapter_test.cc` and add test target to `tests/BUILD.bazel`
+- [x] T052 Implement Android JNI platform adapter bridging C++ engine to Android services in `app/src/jni/alarm_jni_bridge.cc`
+- [x] T053 Create automated ADB E2E verification test script in `scripts/verify_emulator.sh`
+- [x] T054 Execute automated verification script `./scripts/verify_emulator.sh emulator-5554` and validate end-to-end functionality on the active Android emulator
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -177,6 +189,7 @@
 - **Phase 7 (User Story 5 - P3)**: Depends on Phase 2 and US2.
 - **Phase 8 (User Story 6 - P3)**: Depends on Phase 2 and US1/US2.
 - **Phase 9 (Polish)**: Depends on completion of desired user stories.
+- **Phase 10 (iOS Decoupling & Emulator Verification)**: Depends on Phase 9; verifies cross-platform interfaces and runs emulator E2E tests.
 
 ### User Story Dependency Graph
 
@@ -196,6 +209,7 @@ graph TD
     US4 --> Polish
     US5 --> Polish
     US6 --> Polish
+    Polish --> P10[Phase 10: iOS Decoupling & Emulator E2E Verification]
 ```
 
 ---
@@ -208,6 +222,7 @@ graph TD
 - **User Story 2**: T023, T024, T026 can execute concurrently.
 - **User Story 4**: T032, T033, T034 can execute concurrently.
 - **Cross-Story**: Once Phase 2 is complete, US1 and US2 can be implemented concurrently by independent developers.
+- **Phase 10**: T050, T051, and T053 can be developed in parallel.
 
 ---
 
@@ -225,3 +240,4 @@ graph TD
 - Add Phase 7 (US5): Streaming Music & Weather Soundscapes.
 - Add Phase 8 (US6): Power-off Alarm, Quick Nap & TTS.
 - Run Phase 9 (Polish): ProGuard optimization and final APK size audit.
+- Run Phase 10 (iOS & Emulator): Define pure C++ abstract platform interfaces (`core/include/edom/alarm/core/adapter/`), verify with Bazel unit tests, and execute automated ADB E2E verification on `emulator-5554`.

@@ -21,7 +21,7 @@ public class BootCompletedReceiver extends BroadcastReceiver {
 
         if (Intent.ACTION_BOOT_COMPLETED.equals(action) ||
             Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action) ||
-            Intent.ACTION_TIME_SET.equals(action) ||
+            Intent.ACTION_TIME_CHANGED.equals(action) ||
             Intent.ACTION_TIMEZONE_CHANGED.equals(action)) {
 
             // Trigger rescheduling of all enabled alarms from device-protected storage

@@ -8,6 +8,12 @@
 
 **Input**: User description: "帮我设计一款安卓手机闹钟，需要支持安卓11及以上版本，需要在三星S25 ultra和iqoo z9 turbo+手机上包含以下功能：本土化核心特色功能（法定工作日与调休智能识别、本地化在线音乐/流媒体铃声、提前跳过/临时关闭一次、跳过未来N天免打扰）、声音与触感（独立闹钟音量通道、音量渐强、耳机/扬声器智能路由、多样化线性马达振动波形、振动强度调节、音频与振动同步）、交互方式与防赖床机制（手势与传感器交互、小睡设置、计算题/摇晃手机趣味防赖床）、底层硬件与实用细节（关机闹钟、自动唤醒app、倒计时Toast、快速午休、息屏显示AOD联动、闹钟标签管理与TTS）、高稳定性与低资源占用。"
 
+## Clarifications
+
+### Session 2026-09-13
+- Q: How should the core architecture decouple platform capabilities so that both Android and a future iOS app can share the business engine? → A: Pure C++ abstract platform interfaces (`IPlatformScheduler`, `IPlatformAudio`, `IPlatformHaptics`, `IPlatformSensor`) implemented natively by Android (via JNI) and iOS (via Objective-C++/Swift), maximizing code reuse with zero external runtime overhead.
+- Q: How should the end-to-end functional verification be executed and validated on the active local Android emulator? → A: Automated ADB-driven E2E verification script that exercises UI journeys, simulates sensor and alarm events, and validates live SQLite database state on the local Android emulator (`emulator-5554`).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Statutory Workday & Holiday Smart Scheduling (Priority: P1)
@@ -191,6 +197,8 @@ Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, ki
 - **FR-029**: System MUST display next alarm timing information on compatible Always-On Display (AOD) surfaces and trigger visual breathing pulses near the alarm time.
 - **FR-030**: System MUST allow setting text labels for alarms and support reading the label aloud using text-to-speech (TTS) synthesis during alarm playback.
 - **FR-031**: System MUST be optimized to run with minimal battery consumption, low idle memory footprint, and compact installation package size.
+- **FR-032**: System architecture MUST decouple core business logic, holiday evaluation, and SQLite persistence from platform-specific APIs via abstract C++ platform interfaces (`IPlatformScheduler`, `IPlatformAudio`, `IPlatformHaptics`, `IPlatformSensor`), providing ready extensibility for future iOS application implementations.
+- **FR-033**: System MUST support automated end-to-end functional verification on a local Android emulator (API 30+) using an ADB-driven harness that automates UI journeys, simulates sensor/time triggers, and verifies SQLite persistence state.
 
 ---
 
@@ -223,6 +231,8 @@ Can be fully tested by setting a Quick Nap alarm for 15 minutes with one tap, ki
 - **SC-006**: Idle background battery consumption attributed to the alarm service remains below 1.5% of total battery drain over a 24-hour monitoring period.
 - **SC-007**: Cold start time from user tap to interactive main alarm list remains under 600 milliseconds on target devices (Samsung S25 Ultra, iQOO Z9 Turbo+).
 - **SC-008**: User task completion rate for configuring multi-day vacation skip exceeds 95% on the first attempt without user error.
+- **SC-009**: 100% of core domain models, holiday calculations, and SQLite data access logic are isolated behind pure C++ interfaces with zero Android runtime dependencies, enabling direct compilation and reuse on iOS.
+- **SC-010**: 100% of end-to-end functional journeys (creation, statutory calculation, advance skip, challenge resolution, and persistence) pass successfully in the automated ADB verification suite executed against the local Android emulator.
 
 ---
 

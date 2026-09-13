@@ -100,3 +100,15 @@ cc_test(
         "//core:alarm_core",
     ],
 )
+
+cc_test(
+    name = "platform_adapter_test",
+    srcs = [
+        "core/platform_adapter_test.cc",
+        "test_framework.h",
+    ],
+    deps = [
+        "//core:alarm_core",
+    ],
+)
+

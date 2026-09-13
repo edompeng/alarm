@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.edom.alarm">
 
+    <uses-sdk
+        android:minSdkVersion="30"
+        android:targetSdkVersion="34" />
+
     <!-- Permissions for Exact Alarm Wakeup and Direct Boot -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
@@ -37,7 +41,7 @@
         <!-- Full-Screen Ringing Activity (Wakes Screen over Lockscreen) -->
         <activity
             android:name=".ui.RingingActivity"
-            android:exported="false"
+            android:exported="true"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
             android:showWhenLocked="true"
@@ -46,7 +50,7 @@
         <!-- Ringtone & Soundscape Picker -->
         <activity
             android:name=".ui.RingtonePickerActivity"
-            android:exported="false"
+            android:exported="true"
             android:parentActivityName=".ui.MainActivity" />
 
         <!-- Alarm Trigger Receiver (High Priority Wakeup) -->

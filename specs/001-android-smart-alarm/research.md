@@ -126,3 +126,43 @@ Adopt **Direct Android SQLite (`android.database.sqlite.SQLiteOpenHelper`)** wit
    - Zero standing background services or persistent foreground notifications when no alarm is imminent.
    - No polling loops or wakelocks when idle.
    - All SQLite queries executed with parameterized statements and projection column filtering.
+
+---
+
+## 8. Cross-Platform Decoupled Architecture for iOS Extensibility
+
+### Decision
+Implement the core business engine, holiday evaluation rules, anti-oversleep challenge logic, and SQLite persistence in portable modern C++ (C++17/20, Google C++ Style Guide), isolated behind abstract C++ platform interfaces:
+- `IPlatformScheduler`: Platform alarm scheduling (`AlarmManager` on Android, `UNUserNotificationCenter` / BGTask on iOS).
+- `IPlatformAudio`: Audio stream control, crescendo volume ramping, and headphone routing (`AudioTrack`/`MediaPlayer` on Android, `AVAudioPlayer`/`AVAudioSession` on iOS).
+- `IPlatformHaptics`: Linear motor vibration waveforms (`Vibrator` on Android, `UIImpactFeedbackGenerator`/`CHHapticEngine` on iOS).
+- `IPlatformSensor`: Gesture and orientation sensor listeners (`SensorManager` on Android, `CoreMotion` on iOS).
+
+### Rationale
+- **100% Core Code Reuse**: Business logic, China statutory holiday algorithms, vacation date range calculations, and SQLite schema operations are completely identical across Android and iOS.
+- **Zero Runtime Overhead**: C++ executes at bare metal speed with zero cross-runtime bridge penalties (e.g., no JavaScript bridges, no Dart VMs).
+- **Direct Native Interoperability**: Android bridges via JNI (`alarm_jni_bridge.cc`); iOS interfaces directly using Objective-C++ (`.mm`), providing seamless native Swift/SwiftUI interoperability.
+- **Minimal Footprint**: Links directly against system `sqlite3` and POSIX APIs, adding zero third-party dependencies.
+
+### Alternatives Considered
+- **Flat C ABI (`extern "C"`)**: Functional but lacks object-oriented polymorphism, requiring verbose manual function pointer tables.
+- **Cross-Platform Frameworks (Flutter, React Native)**: Adds 15–30 MB to installation package size, increases cold-launch latency, and complicates low-level power-off alarm/sensor access.
+
+---
+
+## 9. Local Android Emulator E2E Verification Pipeline
+
+### Decision
+Establish an automated ADB-driven test harness (`scripts/verify_emulator.sh`) targeting active local Android emulators (`emulator-5554` running Android 14 / API 34):
+1. **Automated Package Lifecycle**: Deploys the built APK, grants runtime permissions (`POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`), and verifies clean process launch.
+2. **UI Journey Automation**: Simulates user interactions via `adb shell input` and `am start` (alarm creation, quick nap triggering, multi-day skip dialog navigation).
+3. **Sensor & Time Event Simulation**: Simulates orientation/shake sensor triggers via ADB broadcasts and manipulates system clocks to trigger statutory holiday and Doze wakeup evaluations.
+4. **Database State Verification**: Directly queries the app's SQLite database on the emulator via `adb shell sqlite3` or content query to assert relational record accuracy.
+
+### Rationale
+- Ensures fast, automated, repeatable verification without requiring physical manual interaction.
+- Provides immediate feedback in CI/local development on whether alarms, skips, and holiday calculations persist and trigger properly on Android 11+ runtime targets.
+
+### Alternatives Considered
+- **Manual GUI Clicking Only**: Time-consuming, error-prone, and lacks automated regression protection.
+- **Pure Unit Tests**: Tests isolated logic but misses Android framework integration, manifest permission gates, and real SQLite file I/O.
