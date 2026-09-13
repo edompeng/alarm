@@ -189,6 +189,20 @@
 
 ---
 
+## Phase 12: Real System Wakeup, Calendar Vacation Skip, Quick Nap Lifecycle & Per-Alarm Audio
+
+**Purpose**: Connect alarms to Android OS `AlarmManager.setAlarmClock()`, implement long-press monthly calendar skip (`VacationCalendarDialog`), in-list Quick Nap countdown cards with auto-destruction, and per-alarm native `RingtoneManager` sound & vibration customization.
+
+- [ ] T061 Integrate real `AlarmManager.setAlarmClock()` and cancellation scheduling in `app/src/com/edom/alarm/ui/MainActivity.java`
+- [ ] T062 [P] Implement skipped-dates calendar suppression and WakeLock full-screen alert handling in `core/src/com/edom/alarm/core/scheduler/AlarmTriggerReceiver.java`
+- [ ] T063 [P] Add long-press context menu ("Skip Dates / Vacation Mode", "Edit", "Delete") and vacation/nap badge rendering in `app/src/com/edom/alarm/ui/AlarmListAdapter.java` and `app/res/layout/item_alarm_card.xml`
+- [ ] T064 Integrate `VacationCalendarDialog` monthly date selection and persistence into `app/src/com/edom/alarm/ui/MainActivity.java`
+- [ ] T065 Implement in-list Quick Nap countdown card creation, `AlarmManager` registration, and auto-destruct lifecycle in `app/src/com/edom/alarm/ui/MainActivity.java`
+- [ ] T066 [P] Add native `RingtoneManager` sound picker row and vibration toggle Switch in `app/res/layout/dialog_alarm_edit.xml` and `app/src/com/edom/alarm/ui/AlarmEditDialog.java`
+- [ ] T067 Extend automated emulator verification script `scripts/verify_emulator.sh` to validate real `AlarmManager` scheduling, monthly vacation date skip, and Quick Nap auto-destruction on `emulator-5554`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -204,6 +218,7 @@
 - **Phase 9 (Polish)**: Depends on completion of desired user stories.
 - **Phase 10 (iOS Decoupling & Emulator Verification)**: Depends on Phase 9.
 - **Phase 11 (Standard Alarm Creation & List Management)**: Builds upon Phase 10; delivers standard time-setting and list management UI.
+- **Phase 12 (Real Wakeup, Vacation Skip, Quick Nap & Per-Alarm Audio)**: Builds upon Phase 11; connects real OS alarms, monthly calendar skip, in-list nap lifecycle, and custom ringtones.
 
 ### User Story Dependency Graph
 
@@ -225,6 +240,7 @@ graph TD
     US6 --> Polish
     Polish --> P10[Phase 10: iOS Decoupling & Emulator E2E Verification]
     P10 --> P11[Phase 11: Standard Alarm Creation & List Management]
+    P11 --> P12[Phase 12: Real Wakeup, Vacation Skip, Quick Nap & Per-Alarm Audio]
 ```
 
 ---
@@ -238,6 +254,7 @@ graph TD
 - **User Story 4**: T032, T033, T034 can execute concurrently.
 - **Phase 10**: T050, T051, and T053 can be developed in parallel.
 - **Phase 11**: T055 and T056 (layouts) can execute concurrently with T057/T058.
+- **Phase 12**: T062, T063, and T066 can be developed in parallel before integration in T061/T064/T065.
 
 ---
 
@@ -257,3 +274,4 @@ graph TD
 - Run Phase 9 (Polish): ProGuard optimization and final APK size audit.
 - Run Phase 10 (iOS & Emulator): Define pure C++ abstract platform interfaces and verify on emulator.
 - Run Phase 11 (Standard Alarm UI): Implement TimePicker creation dialog (`AlarmEditDialog`), alarm card list view (`AlarmListAdapter`), empty state, and emulator verification of standard CRUD flows.
+- Run Phase 12 (Real Wakeup & Advanced Customization): Implement `AlarmManager.setAlarmClock()` background scheduling, `VacationCalendarDialog` monthly date skip, Quick Nap in-list self-destruct lifecycle, and per-alarm native ringtone/vibration settings.
