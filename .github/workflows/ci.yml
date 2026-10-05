@@ -37,10 +37,14 @@ jobs:
       - name: Generate Version
         id: gen-ver
         run: |
+          set -euo pipefail
           bash scripts/generate_version.sh
-          echo "Release version:     $(bash scripts/generate_version.sh)"
-          echo "Release tag:         $(bash scripts/generate_version.sh --tag)"
-          echo "Release code:        $(bash scripts/generate_version.sh --code)"
+          VERSION="$(grep -m1 '^version=' "${GITHUB_OUTPUT}" | cut -d= -f2-)"
+          VERSION_TAG="$(grep -m1 '^version_tag=' "${GITHUB_OUTPUT}" | cut -d= -f2-)"
+          VERSION_CODE="$(grep -m1 '^version_code=' "${GITHUB_OUTPUT}" | cut -d= -f2-)"
+          echo "Release version:     ${VERSION}"
+          echo "Release tag:         ${VERSION_TAG}"
+          echo "Release code:        ${VERSION_CODE}"
 
   build-android-and-linux:
     name: Android & Linux (Build, Test & Package)

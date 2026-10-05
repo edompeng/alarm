@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # generate_version.sh: Generates dynamic release version based on tag + date/time.
-# Format: <tag>-<YYYYMMDDHHMM> (e.g. v1.0.0-202610051305)
+# Format: <tag>-<YYYYMMDDHHMMSS> (e.g. v1.0.0-20261005130530), China Standard Time.
+# Every invocation stamps the live time so each push publishes a distinct release.
 # ==============================================================================
 set -euo pipefail
 
@@ -27,7 +28,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --help|-h)
       echo "Usage: $0 [base_tag] [--tag|--code|--base]"
-      echo "Generates dynamic release version formatted as: <base_tag>-<YYYYMMDDHHMM>"
+      echo "Generates dynamic release version formatted as: <base_tag>-<YYYYMMDDHHMMSS>"
       exit 0
       ;;
     *)
@@ -59,14 +60,17 @@ fi
 # Clean leading 'v'
 CLEAN_BASE="${INPUT_TAG#v}"
 
-# If base tag already contains timestamp (e.g. 1.0.0-202610051305), reuse directly
-if [[ "${CLEAN_BASE}" =~ -[0-9]{8} ]]; then
-  VERSION="${CLEAN_BASE}"
-else
-  # Use China Standard Time (Asia/Shanghai) for consistent date/time representation
-  DATE_TIME="$(TZ='Asia/Shanghai' date +'%Y%m%d%H%M')"
-  VERSION="${CLEAN_BASE}-${DATE_TIME}"
+# Drop a trailing build timestamp so a previous release tag (e.g. 1.0.0-202610051310)
+# contributes only its base version (1.0.0) to the new version.
+BASE_VERSION="$(printf '%s' "${CLEAN_BASE}" | sed -E 's/-[0-9]{8,}$//')"
+if [ -z "${BASE_VERSION}" ]; then
+  BASE_VERSION="1.0.0"
 fi
+
+# Always stamp the live build time (China Standard Time, second precision) so every
+# push produces a new version/tag instead of reusing the previous release timestamp.
+DATE_TIME="$(TZ='Asia/Shanghai' date +'%Y%m%d%H%M%S')"
+VERSION="${BASE_VERSION}-${DATE_TIME}"
 
 VERSION_TAG="v${VERSION#v}"
 VERSION_CODE="$(date +%s)"
@@ -86,7 +90,7 @@ case "${OUTPUT_MODE}" in
     echo "${VERSION_CODE}"
     ;;
   base)
-    echo "${CLEAN_BASE%%-*}"
+    echo "${BASE_VERSION}"
     ;;
   version|*)
     echo "${VERSION}"
