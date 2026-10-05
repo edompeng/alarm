@@ -255,21 +255,17 @@ bash scripts/verify_device.sh <device-serial>
 
 ## 💻 跨平台命令行工具 (alarm-cli)
 
-除了 Android 移动端应用外，项目还提供了独立的跨平台命令行工具 `alarm-cli`，可直接在 Linux / macOS / 终端运行进行日期判别与闹钟计算：
+除了 Android 移动端应用外，项目还提供了独立的跨平台命令行工具 `alarm-cli`，可直接在 Linux / macOS / 终端运行：
 
 ```bash
 # 1. 编译 alarm-cli
 bazel build //cli:alarm_cli
 
-# 2. 判别指定日期是否为法定节假日或调休工作日
+# 2. 按工作周规则判别日期类型（工作日 / 周末）
 ./bazel-bin/cli/alarm_cli check-date 2026-10-01
 
-# 3. 格式化小憩倒计时
-./bazel-bin/cli/alarm_cli countdown 25
-
-# 4. 查询天气铃声声景映射
-./bazel-bin/cli/alarm_cli weather thunderstorm
-
-# 5. 生成防贪睡算术挑战
-./bazel-bin/cli/alarm_cli math-challenge
+# 3. 查看版本与运行平台信息
+./bazel-bin/cli/alarm_cli version
 ```
+
+> `check-date` 目前只使用内置的工作周规则；法定节假日与调休数据保存在应用侧（`holidays_2026.json` 与 SQLite），CLI 尚未读取。

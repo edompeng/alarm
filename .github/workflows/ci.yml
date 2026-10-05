@@ -163,7 +163,6 @@ jobs:
         run: |
           ./bazel-bin/cli/alarm_cli version
           ./bazel-bin/cli/alarm_cli check-date 2026-10-01
-          ./bazel-bin/cli/alarm_cli countdown 15
 
       - name: Upload Android & Linux Release Assets
         uses: actions/upload-artifact@v4
@@ -199,7 +198,6 @@ jobs:
         run: |
           ./bazel-bin/cli/alarm_cli version
           ./bazel-bin/cli/alarm_cli check-date 2026-10-01
-          ./bazel-bin/cli/alarm_cli countdown 15
 
       - name: Upload macOS Release Assets
         uses: actions/upload-artifact@v4

@@ -25,7 +25,6 @@ typedef unsigned char jboolean;
 #include "core/src/ringtone/streaming_ringtone_resolver.h"
 #include "core/src/ringtone/weather_ringtone_mapper.h"
 #include "core/src/scheduler/alarm_scheduler_impl.h"
-#include "core/src/scheduler/countdown_formatter.h"
 
 namespace edom::alarm::jni {
 

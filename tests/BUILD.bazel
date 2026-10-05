@@ -91,17 +91,6 @@ cc_test(
 )
 
 cc_test(
-    name = "countdown_formatter_test",
-    srcs = [
-        "core/countdown_formatter_test.cc",
-        "test_framework.h",
-    ],
-    deps = [
-        "//core:alarm_core",
-    ],
-)
-
-cc_test(
     name = "platform_adapter_test",
     srcs = [
         "core/platform_adapter_test.cc",
@@ -111,4 +100,3 @@ cc_test(
         "//core:alarm_core",
     ],
 )
-
