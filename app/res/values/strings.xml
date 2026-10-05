@@ -149,4 +149,6 @@
     <string name="toast_sync_url_empty">Sync URL cannot be empty</string>
     <string name="toast_alarm_ring_in_hm">Alarm will ring in %1$d hours %2$d minutes</string>
     <string name="toast_alarm_ring_in_m">Alarm will ring in %1$d minutes</string>
+    <string name="app_version_default">1.0.0</string>
+    <string name="about_version">v%1$s</string>
 </resources>

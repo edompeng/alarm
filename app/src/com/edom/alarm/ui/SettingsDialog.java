@@ -210,6 +210,12 @@ public class SettingsDialog extends Dialog {
             layoutOem.setVisibility(View.GONE);
         }
 
+        // Version display
+        TextView tvSettingsVersion = findViewById(R.id.tv_settings_version);
+        if (tvSettingsVersion != null) {
+            tvSettingsVersion.setText(AppVersionUtils.getFormattedVersion(mActivity));
+        }
+
         // Buttons
         findViewById(R.id.btn_cancel_settings).setOnClickListener(v -> dismiss());
 

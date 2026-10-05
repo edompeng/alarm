@@ -9,7 +9,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DIST_DIR="${REPO_ROOT}/dist"
 
-VERSION="1.0.0"
+VERSION="${APP_VERSION_NAME:-}"
+VERSION_CODE="${APP_VERSION_CODE:-}"
 BUILD_ANDROID=true
 BUILD_CLI=true
 GENERATE_CHECKSUMS=true
@@ -30,6 +31,16 @@ while [[ $# -gt 0 ]]; do
       GENERATE_CHECKSUMS=false
       shift
       ;;
+    --version-name)
+      [ "$#" -ge 2 ] || { echo "error: --version-name requires an argument" >&2; exit 2; }
+      VERSION="${2#v}"
+      shift 2
+      ;;
+    --version-code)
+      [ "$#" -ge 2 ] || { echo "error: --version-code requires an argument" >&2; exit 2; }
+      VERSION_CODE="$2"
+      shift 2
+      ;;
     v*|[0-9]*)
       VERSION="${1#v}"
       shift
@@ -40,6 +51,22 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [ -z "${VERSION}" ]; then
+  if [ -f "${SCRIPT_DIR}/generate_version.sh" ]; then
+    VERSION="$(bash "${SCRIPT_DIR}/generate_version.sh")"
+  else
+    VERSION="1.0.0"
+  fi
+fi
+
+if [ -z "${VERSION_CODE}" ]; then
+  if [ -f "${SCRIPT_DIR}/generate_version.sh" ]; then
+    VERSION_CODE="$(bash "${SCRIPT_DIR}/generate_version.sh" --code)"
+  else
+    VERSION_CODE="1"
+  fi
+fi
 
 # Resolve ANDROID_HOME / ANDROID_SDK_ROOT
 if [ -z "${ANDROID_HOME:-}" ]; then
@@ -81,7 +108,8 @@ if [ "${BUILD_ANDROID}" = true ]; then
   # 1. Build Base Release APK
   BASE_APK="${DIST_DIR}/SmartAlarm-v${VERSION}-android-universal.apk"
   echo "--> Building Universal Android APK..."
-  bash "${SCRIPT_DIR}/build_apk.sh" --repo-root "${REPO_ROOT}" --mode release --output "${BASE_APK}"
+  bash "${SCRIPT_DIR}/build_apk.sh" --repo-root "${REPO_ROOT}" --mode release \
+    --version-name "${VERSION}" --version-code "${VERSION_CODE}" --output "${BASE_APK}"
 
   # Helper to produce ABI-specific APKs
   package_abi_apk() {
@@ -136,7 +164,7 @@ if [ "${BUILD_CLI}" = true ]; then
   fi
 
   echo "--> Building native CLI binary..."
-  "${BAZEL_BIN}" build //cli:alarm_cli
+  "${BAZEL_BIN}" build --copt="-DSMART_ALARM_VERSION=\"${VERSION}\"" //cli:alarm_cli
 
   CLI_BIN="${REPO_ROOT}/bazel-bin/cli/alarm_cli"
   OS_TYPE="$(uname -s | tr '[:upper:]' '[:lower:]')"

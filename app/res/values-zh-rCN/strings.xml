@@ -149,4 +149,6 @@
     <string name="toast_sync_url_empty">节假日配置订阅源地址不能为空</string>
     <string name="toast_alarm_ring_in_hm">闹钟将在 %1$d 小时 %2$d 分钟后响铃</string>
     <string name="toast_alarm_ring_in_m">闹钟将在 %1$d 分钟后响铃</string>
+    <string name="app_version_default">1.0.0</string>
+    <string name="about_version">版本 v%1$s</string>
 </resources>

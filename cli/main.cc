@@ -23,8 +23,12 @@ void PrintUsage(const char* prog_name) {
               << "  help                             Show this help message\n";
 }
 
+#ifndef SMART_ALARM_VERSION
+#define SMART_ALARM_VERSION "1.0.0"
+#endif
+
 void PrintVersion() {
-    std::cout << "Smart Alarm Core Engine v1.0.0\n"
+    std::cout << "Smart Alarm Core Engine v" << SMART_ALARM_VERSION << "\n"
               << "Standard: C++20 Clean Architecture\n"
               << "Platforms: Android (Universal/ARM64/ARMv7/x86_64), Linux, macOS, Windows\n";
 }

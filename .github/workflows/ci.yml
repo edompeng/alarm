@@ -21,8 +21,30 @@ env:
   JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8
 
 jobs:
+  init-version:
+    name: Initialize Release Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.gen-ver.outputs.version }}
+      version_tag: ${{ steps.gen-ver.outputs.version_tag }}
+      version_code: ${{ steps.gen-ver.outputs.version_code }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Version
+        id: gen-ver
+        run: |
+          bash scripts/generate_version.sh
+          echo "Release version:     $(bash scripts/generate_version.sh)"
+          echo "Release tag:         $(bash scripts/generate_version.sh --tag)"
+          echo "Release code:        $(bash scripts/generate_version.sh --code)"
+
   build-android-and-linux:
     name: Android & Linux (Build, Test & Package)
+    needs: [init-version]
     runs-on: ubuntu-latest
 
     steps:
@@ -74,7 +96,9 @@ jobs:
 
       - name: Package Android & Linux Releases
         run: |
-          bash scripts/package_releases.sh --skip-checksums 1.0.0
+          bash scripts/package_releases.sh --skip-checksums \
+            --version-name "${{ needs.init-version.outputs.version }}" \
+            --version-code "${{ needs.init-version.outputs.version_code }}"
 
       - name: Verify Android APK Signatures
         run: |
@@ -100,6 +124,7 @@ jobs:
 
   build-macos:
     name: macOS (Build, Test & Package CLI)
+    needs: [init-version]
     runs-on: macos-latest
 
     steps:
@@ -115,7 +140,8 @@ jobs:
 
       - name: Package macOS CLI Release
         run: |
-          bash scripts/package_releases.sh --cli-only --skip-checksums 1.0.0
+          bash scripts/package_releases.sh --cli-only --skip-checksums \
+            --version-name "${{ needs.init-version.outputs.version }}"
 
       - name: Smoke Test macOS CLI
         run: |
@@ -133,7 +159,7 @@ jobs:
 
   publish-release:
     name: Publish Multi-Platform Release
-    needs: [build-android-and-linux, build-macos]
+    needs: [init-version, build-android-and-linux, build-macos]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     permissions:
@@ -160,29 +186,29 @@ jobs:
           echo "=== SHA256SUMS.txt ==="
           cat SHA256SUMS.txt
 
-          RELEASE_TAG="${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.0.0' }}"
+          RELEASE_TAG="${{ needs.init-version.outputs.version_tag }}"
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
 
-          cat << 'EOF' > ../release_notes.md
-          ## 🚀 Smart Alarm (智能法定节假日闹钟) 全平台发行版
+          cat << EOF > ../release_notes.md
+          ## 🚀 Smart Alarm (智能法定节假日闹钟) 全平台发行版 (${RELEASE_TAG})
 
           Smart Alarm 是一款专为中国法定节假日与复杂唤醒场景设计的高可靠性智能闹钟应用，采用 C++20 跨平台核心业务层 + JNI 桥接 + 原生 Android UI 架构。
 
           ### 📱 Android 发行包 (Signed APKs)
-          - `SmartAlarm-v1.0.0-android-universal.apk` — **通用安装包** (内置全套资源，推荐多数 Android 11+ 设备直接安装)
-          - `SmartAlarm-v1.0.0-android-arm64-v8a.apk` — **ARM64-v8a 优化包** (面向主流 64 位 ARM 智能手机，性能最优)
-          - `SmartAlarm-v1.0.0-android-armeabi-v7a.apk` — **ARMv7 兼容包** (兼容旧款 32 位 ARM 设备)
-          - `SmartAlarm-v1.0.0-android-x86_64.apk` — **x86_64 架构包** (适配 Android 模拟器与 x86 架构移动设备)
+          - \`SmartAlarm-${RELEASE_TAG}-android-universal.apk\` — **通用安装包** (内置全套资源，推荐多数 Android 11+ 设备直接安装)
+          - \`SmartAlarm-${RELEASE_TAG}-android-arm64-v8a.apk\` — **ARM64-v8a 优化包** (面向主流 64 位 ARM 智能手机，性能最优)
+          - \`SmartAlarm-${RELEASE_TAG}-android-armeabi-v7a.apk\` — **ARMv7 兼容包** (兼容旧款 32 位 ARM 设备)
+          - \`SmartAlarm-${RELEASE_TAG}-android-x86_64.apk\` — **x86_64 架构包** (适配 Android 模拟器与 x86 架构移动设备)
 
           ### 💻 桌面与原生命令行工具 (Desktop & CLI)
-          - `SmartAlarm-v1.0.0-linux-x86_64.tar.gz` — **Linux x86_64 发行包** (含 `alarm-cli` 原生命令行、2026 法定节假日库与适配头文件)
-          - `SmartAlarm-v1.0.0-macos-arm64.tar.gz` — **macOS Apple Silicon 发行包** (含 `alarm-cli` 原生命令行、2026 法定节假日库与适配头文件)
+          - \`SmartAlarm-${RELEASE_TAG}-linux-x86_64.tar.gz\` — **Linux x86_64 发行包** (含 \`alarm-cli\` 原生命令行、2026 法定节假日库与适配头文件)
+          - \`SmartAlarm-${RELEASE_TAG}-macos-arm64.tar.gz\` — **macOS Apple Silicon 发行包** (含 \`alarm-cli\` 原生命令行、2026 法定节假日库与适配头文件)
 
           ### 🔒 完整性与校验和 (SHA256 Checksums)
-          ```
+          \`\`\`
           EOF
           cat SHA256SUMS.txt >> ../release_notes.md
-          echo '```' >> ../release_notes.md
+          echo '\`\`\`' >> ../release_notes.md
 
       - name: Publish Release to GitHub Releases
         uses: softprops/action-gh-release@v2

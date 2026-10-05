@@ -204,16 +204,16 @@ bash scripts/verify_device.sh <device-serial>
 
 ## 📦 主流平台发行包清单 (Release Packages)
 
-发布页面提供以下主流平台二进制文件及校验码：
+版本号采用 **`<基准Tag>-<东八区日期时间>`** 格式动态生成（例如 `v1.0.0-202610051305`），并在 App 主界面及设置弹窗中实时显示。发布页面提供以下主流平台二进制文件及校验码：
 
 | 发行包文件名 | 适用平台与架构 | 说明 |
 |---|---|---|
-| `SmartAlarm-v1.0.0-android-universal.apk` | Android 11+ (通用) | 官方推荐，内含完整资源与适配层 |
-| `SmartAlarm-v1.0.0-android-arm64-v8a.apk` | Android 64位 ARM | 针对现代旗舰与主流芯片深度优化 |
-| `SmartAlarm-v1.0.0-android-armeabi-v7a.apk` | Android 32位 ARM | 适配老旧设备与特定嵌入式硬件 |
-| `SmartAlarm-v1.0.0-android-x86_64.apk` | Android x86_64 | 适配 Android 模拟器与 x86 桌面设备 |
-| `SmartAlarm-v1.0.0-linux-x86_64.tar.gz` | Linux x86_64 | 包含 `alarm-cli` 命令行工具、头文件与 2026 日历库 |
-| `SmartAlarm-v1.0.0-macos-arm64.tar.gz` | macOS (Apple Silicon) | 包含 `alarm-cli` 命令行工具、头文件与 2026 日历库 |
+| `SmartAlarm-v<版本>-android-universal.apk` | Android 11+ (通用) | 官方推荐，内含完整资源与适配层 |
+| `SmartAlarm-v<版本>-android-arm64-v8a.apk` | Android 64位 ARM | 针对现代旗舰与主流芯片深度优化 |
+| `SmartAlarm-v<版本>-android-armeabi-v7a.apk` | Android 32位 ARM | 适配老旧设备与特定嵌入式硬件 |
+| `SmartAlarm-v<版本>-android-x86_64.apk` | Android x86_64 | 适配 Android 模拟器与 x86 桌面设备 |
+| `SmartAlarm-v<版本>-linux-x86_64.tar.gz` | Linux x86_64 | 包含 `alarm-cli` 命令行工具、头文件与 2026 日历库 |
+| `SmartAlarm-v<版本>-macos-arm64.tar.gz` | macOS (Apple Silicon) | 包含 `alarm-cli` 命令行工具、头文件与 2026 日历库 |
 | `SHA256SUMS.txt` | 全平台校验和 | SHA256 安全完整性校验清单 |
 
 ---

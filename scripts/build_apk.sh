@@ -10,6 +10,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 OUTPUT_PATH=""
 BUILD_MODE="debug"
+VERSION_NAME="${APP_VERSION_NAME:-}"
+VERSION_CODE="${APP_VERSION_CODE:-}"
 
 export HOME="${HOME:-/tmp}"
 export LC_ALL="C.UTF-8"
@@ -32,6 +34,16 @@ while [ "$#" -gt 0 ]; do
       BUILD_MODE="$2"
       shift 2
       ;;
+    --version-name)
+      [ "$#" -ge 2 ] || { echo "error: --version-name requires an argument" >&2; exit 2; }
+      VERSION_NAME="$2"
+      shift 2
+      ;;
+    --version-code)
+      [ "$#" -ge 2 ] || { echo "error: --version-code requires an argument" >&2; exit 2; }
+      VERSION_CODE="$2"
+      shift 2
+      ;;
     --release)
       BUILD_MODE="release"
       shift 1
@@ -46,6 +58,22 @@ while [ "$#" -gt 0 ]; do
       ;;
   esac
 done
+
+if [ -z "${VERSION_NAME}" ]; then
+  if [ -f "${SCRIPT_DIR}/generate_version.sh" ]; then
+    VERSION_NAME="$(bash "${SCRIPT_DIR}/generate_version.sh")"
+  else
+    VERSION_NAME="1.0.0"
+  fi
+fi
+
+if [ -z "${VERSION_CODE}" ]; then
+  if [ -f "${SCRIPT_DIR}/generate_version.sh" ]; then
+    VERSION_CODE="$(bash "${SCRIPT_DIR}/generate_version.sh" --code)"
+  else
+    VERSION_CODE="1"
+  fi
+fi
 
 if [ -n "${ALARM_RELEASE_KEYSTORE:-}" ]; then
   BUILD_MODE="release"
@@ -110,6 +138,8 @@ fi
 echo "==> Building Smart Alarm APK (${BUILD_MODE} mode)"
 echo "    ANDROID_HOME: ${ANDROID_HOME}"
 echo "    BUILD_TOOLS:  ${BUILD_TOOLS}"
+echo "    VERSION_NAME: ${VERSION_NAME}"
+echo "    VERSION_CODE: ${VERSION_CODE}"
 
 mkdir -p "${BUILD_TMP}/compiled_res" "${BUILD_TMP}/gen" "${BUILD_TMP}/classes" "${OUTPUT_DIR}"
 
@@ -123,6 +153,9 @@ echo "--> Linking resources and generating R.java..."
   --manifest "${REPO_ROOT}/app/AndroidManifest.xml" \
   --min-sdk-version 30 \
   --target-sdk-version 34 \
+  --version-code "${VERSION_CODE}" \
+  --version-name "${VERSION_NAME}" \
+  --replace-version \
   --java "${BUILD_TMP}/gen" \
   -o "${BUILD_TMP}/app_unaligned.apk" \
   "${BUILD_TMP}/compiled_res.zip" \

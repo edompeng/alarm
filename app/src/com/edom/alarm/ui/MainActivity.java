@@ -83,7 +83,12 @@ public class MainActivity extends Activity {
                 mApplication.capabilityEvaluator(),
                 this::reconcileAndPresent);
 
-        // Header Settings Button
+        // Header Settings Button and Version
+        TextView tvAppVersion = findViewById(R.id.tv_app_version);
+        if (tvAppVersion != null) {
+            tvAppVersion.setText(AppVersionUtils.getFormattedVersion(this));
+        }
+
         findViewById(R.id.btn_settings).setOnClickListener(v -> {
             new SettingsDialog(MainActivity.this, languageChanged -> {
                 if (languageChanged) {

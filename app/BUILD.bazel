@@ -16,7 +16,10 @@ genrule(
     outs = ["alarm_debug_apk.apk"],
     cmd = "$(location //scripts:build_apk.sh) --repo-root $$PWD --mode debug --output $@",
     tags = ["no-sandbox"],
-    tools = ["//scripts:build_apk.sh"],
+    tools = [
+        "//scripts:build_apk.sh",
+        "//scripts:generate_version.sh",
+    ],
 )
 
 genrule(
@@ -31,7 +34,10 @@ genrule(
     outs = ["alarm_release_apk.apk"],
     cmd = "$(location //scripts:build_apk.sh) --repo-root $$PWD --mode release --output $@",
     tags = ["no-sandbox"],
-    tools = ["//scripts:build_apk.sh"],
+    tools = [
+        "//scripts:build_apk.sh",
+        "//scripts:generate_version.sh",
+    ],
 )
 
 cc_library(

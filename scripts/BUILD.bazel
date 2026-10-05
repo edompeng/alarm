@@ -1,1 +1,5 @@
-exports_files(["build_apk.sh"])
+exports_files([
+    "build_apk.sh",
+    "generate_version.sh",
+    "package_releases.sh",
+])
