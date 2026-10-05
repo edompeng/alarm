@@ -94,7 +94,45 @@ jobs:
         run: |
           bazel test --keep_going //...
 
+      - name: Restore Release Signing Material
+        id: signing
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.ALARM_RELEASE_KEYSTORE_BASE64 }}
+          SIGNING_KEY_ALIAS: ${{ secrets.ALARM_RELEASE_KEY_ALIAS }}
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.ALARM_RELEASE_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.ALARM_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SIGNING_KEYSTORE_BASE64}" ]; then
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "::warning::Release signing secrets are not configured; this pull-request build is signed with a throwaway key and must never be published."
+              echo "keystore_path=" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+            echo "::error::Release signing secrets are missing. Configure ALARM_RELEASE_KEYSTORE_BASE64, ALARM_RELEASE_KEY_ALIAS, ALARM_RELEASE_KEYSTORE_PASSWORD and ALARM_RELEASE_KEY_PASSWORD so release APKs keep a stable signature."
+            exit 1
+          fi
+          for name in SIGNING_KEY_ALIAS SIGNING_KEYSTORE_PASSWORD SIGNING_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Release signing secret ${name} is missing."
+              exit 1
+            fi
+          done
+          KEYSTORE_PATH="${RUNNER_TEMP}/alarm-release.keystore"
+          printf '%s' "${SIGNING_KEYSTORE_BASE64}" | base64 -d > "${KEYSTORE_PATH}"
+          chmod 600 "${KEYSTORE_PATH}"
+          keytool -list -keystore "${KEYSTORE_PATH}" \
+            -storepass "${SIGNING_KEYSTORE_PASSWORD}" \
+            -alias "${SIGNING_KEY_ALIAS}" > /dev/null
+          echo "keystore_path=${KEYSTORE_PATH}" >> "${GITHUB_OUTPUT}"
+          echo "Release signing material restored and verified (alias: ${SIGNING_KEY_ALIAS})."
+
       - name: Package Android & Linux Releases
+        env:
+          ALARM_RELEASE_KEYSTORE: ${{ steps.signing.outputs.keystore_path }}
+          ALARM_RELEASE_KEY_ALIAS: ${{ secrets.ALARM_RELEASE_KEY_ALIAS }}
+          ALARM_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ALARM_RELEASE_KEYSTORE_PASSWORD }}
+          ALARM_RELEASE_KEY_PASSWORD: ${{ secrets.ALARM_RELEASE_KEY_PASSWORD }}
         run: |
           bash scripts/package_releases.sh --skip-checksums \
             --version-name "${{ needs.init-version.outputs.version }}" \
@@ -102,10 +140,24 @@ jobs:
 
       - name: Verify Android APK Signatures
         run: |
+          PRIMARY_DIGEST=""
           for apk in dist/*.apk; do
             echo "--> Verifying signature of ${apk}..."
             "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose "${apk}"
+            DIGEST="$("${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --print-certs "${apk}" \
+              | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n 1)"
+            if [ -z "${DIGEST}" ]; then
+              echo "::error::No signer certificate found for ${apk}"
+              exit 1
+            fi
+            if [ -z "${PRIMARY_DIGEST}" ]; then
+              PRIMARY_DIGEST="${DIGEST}"
+            elif [ "${DIGEST}" != "${PRIMARY_DIGEST}" ]; then
+              echo "::error::${apk} is signed by a different key (${DIGEST} != ${PRIMARY_DIGEST})."
+              exit 1
+            fi
           done
+          echo "All Android artifacts share one signer: ${PRIMARY_DIGEST}"
 
       - name: Smoke Test Linux CLI
         run: |

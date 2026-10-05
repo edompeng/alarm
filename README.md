@@ -147,6 +147,41 @@ export ALARM_RELEASE_KEY_PASSWORD="password"
 bash scripts/build_apk.sh --mode release --output build/alarm-release.apk
 ```
 
+### 发布签名与 CI Secrets（保证可覆盖升级）
+
+CI 必须使用**固定的发布签名密钥**。未配置以下 Repository secrets 时，非 PR 事件（`push` / `tag` / `workflow_dispatch`）会在 Android 作业中直接失败，避免发布“每次构建重新生成密钥、导致用户无法覆盖升级”的安装包：
+
+| Secret 名称 | 内容 |
+|---|---|
+| `ALARM_RELEASE_KEYSTORE_BASE64` | release keystore 文件的 Base64 文本 |
+| `ALARM_RELEASE_KEY_ALIAS` | keystore 内私钥别名（默认 `alarmreleasekey`） |
+| `ALARM_RELEASE_KEYSTORE_PASSWORD` | keystore 口令 |
+| `ALARM_RELEASE_KEY_PASSWORD` | 私钥口令（通常与 keystore 口令相同） |
+
+首次配置（keystore 仅保存在本机与 GitHub Secrets，**切勿提交到仓库**）：
+
+```bash
+# 1. 生成发布密钥（若已有 release.keystore 请沿用同一文件，重新生成会导致无法覆盖升级）
+keytool -genkeypair -v -keystore release.keystore -storepass '<口令>' -keypass '<口令>' \
+  -alias alarmreleasekey -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=Smart Alarm Release,O=Edom,C=CN"
+
+# 2. 写入 GitHub Repository Secrets
+base64 -i release.keystore | gh secret set ALARM_RELEASE_KEYSTORE_BASE64 --repo <owner>/<repo>
+printf '%s' 'alarmreleasekey' | gh secret set ALARM_RELEASE_KEY_ALIAS --repo <owner>/<repo>
+printf '%s' '<口令>' | gh secret set ALARM_RELEASE_KEYSTORE_PASSWORD --repo <owner>/<repo>
+printf '%s' '<口令>' | gh secret set ALARM_RELEASE_KEY_PASSWORD --repo <owner>/<repo>
+
+# 3. 校验
+gh secret list --repo <owner>/<repo>
+```
+
+说明：
+- **Pull Request**：读不到 secrets 时使用临时密钥构建（仅供验证，不会发布）。
+- **push / tag / workflow_dispatch**：缺少 secrets 时 Android 作业失败并输出 `::error::`，阻止发布不可覆盖升级的产物。
+- 打包完成后 CI 会校验 universal 与各 ABI APK 的签名证书 SHA-256 一致，防止个别产物退回临时密钥。
+- 轮换密钥会使已安装用户无法覆盖升级（需先卸载），非必要不要更换。
+
 ---
 
 ## 🧪 自动化测试与验证 (Testing & Verification)

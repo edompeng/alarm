@@ -130,20 +130,11 @@ if [ "${BUILD_ANDROID}" = true ]; then
     # Zipalign
     "${BUILD_TOOLS}/zipalign" -v -p 4 "${TMP_DIR}/base.apk" "${TMP_DIR}/aligned.apk" > /dev/null
     
-    # Sign with release keystore
-    local KEYSTORE="${SCRIPT_DIR}/release.keystore"
-    "${BUILD_TOOLS}/apksigner" sign \
-      --ks "${KEYSTORE}" \
-      --ks-pass "pass:androidrelease" \
-      --key-pass "pass:androidrelease" \
-      --ks-key-alias "alarmreleasekey" \
-      --v1-signing-enabled true \
-      --v2-signing-enabled true \
-      --v3-signing-enabled true \
-      --out "${target_apk}" \
-      "${TMP_DIR}/aligned.apk"
-      
-    "${BUILD_TOOLS}/apksigner" verify "${target_apk}"
+    # Sign with the configured release material so every ABI artifact shares the
+    # universal APK's signer (CI secrets or scripts/release.keystore).
+    bash "${SCRIPT_DIR}/build_apk.sh" --sign-only --mode release \
+      --input "${TMP_DIR}/aligned.apk" --output "${target_apk}"
+
     echo "    Created: $(basename "${target_apk}") ($(wc -c < "${target_apk}" | tr -d ' ') bytes)"
   }
 

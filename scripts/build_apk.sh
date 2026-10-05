@@ -12,6 +12,8 @@ OUTPUT_PATH=""
 BUILD_MODE="debug"
 VERSION_NAME="${APP_VERSION_NAME:-}"
 VERSION_CODE="${APP_VERSION_CODE:-}"
+SIGN_ONLY=false
+INPUT_APK=""
 
 export HOME="${HOME:-/tmp}"
 export LC_ALL="C.UTF-8"
@@ -42,6 +44,15 @@ while [ "$#" -gt 0 ]; do
     --version-code)
       [ "$#" -ge 2 ] || { echo "error: --version-code requires an argument" >&2; exit 2; }
       VERSION_CODE="$2"
+      shift 2
+      ;;
+    --sign-only)
+      SIGN_ONLY=true
+      shift 1
+      ;;
+    --input)
+      [ "$#" -ge 2 ] || { echo "error: --input requires a path" >&2; exit 2; }
+      INPUT_APK="$2"
       shift 2
       ;;
     --release)
@@ -75,6 +86,11 @@ if [ -z "${VERSION_CODE}" ]; then
   fi
 fi
 
+if [ "${SIGN_ONLY}" = true ] && { [ -z "${INPUT_APK}" ] || [ -z "${OUTPUT_PATH}" ]; }; then
+  echo "error: --sign-only requires both --input <apk> and --output <apk>" >&2
+  exit 2
+fi
+
 if [ -n "${ALARM_RELEASE_KEYSTORE:-}" ]; then
   BUILD_MODE="release"
 fi
@@ -106,15 +122,6 @@ else
   exit 1
 fi
 
-if [ -f "${ANDROID_HOME}/platforms/android-34/android.jar" ]; then
-  PLATFORM_JAR="${ANDROID_HOME}/platforms/android-34/android.jar"
-elif [ -d "${ANDROID_HOME}/platforms" ]; then
-  PLATFORM_JAR="$(ls -d "${ANDROID_HOME}/platforms/android-"*/android.jar 2>/dev/null | sort -V | tail -n 1)"
-else
-  echo "error: android.jar not found under ${ANDROID_HOME}/platforms" >&2
-  exit 1
-fi
-
 JAVAC_BIN="javac"
 if [ -n "${JAVA_HOME:-}" ] && [ -x "${JAVA_HOME}/bin/javac" ]; then
   JAVAC_BIN="${JAVA_HOME}/bin/javac"
@@ -125,6 +132,86 @@ if [ -n "${JAVA_HOME:-}" ] && [ -x "${JAVA_HOME}/bin/keytool" ]; then
   KEYTOOL_BIN="${JAVA_HOME}/bin/keytool"
 fi
 
+# Resolves the keystore, alias and passwords used for signing. Release builds use
+# ALARM_RELEASE_KEYSTORE when provided (CI secrets) and otherwise fall back to a
+# local scripts/release.keystore so both paths stay byte-for-byte compatible.
+resolve_signing_material() {
+  if [ "${BUILD_MODE}" = "release" ]; then
+    if [ -n "${ALARM_RELEASE_KEYSTORE:-}" ]; then
+      : "${ALARM_RELEASE_KEY_ALIAS:?set ALARM_RELEASE_KEY_ALIAS for release signing}"
+      : "${ALARM_RELEASE_KEYSTORE_PASSWORD:?set ALARM_RELEASE_KEYSTORE_PASSWORD for release signing}"
+      : "${ALARM_RELEASE_KEY_PASSWORD:?set ALARM_RELEASE_KEY_PASSWORD for release signing}"
+      [ -f "${ALARM_RELEASE_KEYSTORE}" ] || {
+        echo "error: release keystore does not exist: ${ALARM_RELEASE_KEYSTORE}" >&2
+        exit 1
+      }
+      KEYSTORE="$(cd "$(dirname "${ALARM_RELEASE_KEYSTORE}")" && pwd)/$(basename "${ALARM_RELEASE_KEYSTORE}")"
+      KEY_ALIAS="${ALARM_RELEASE_KEY_ALIAS}"
+      KS_PASS="env:ALARM_RELEASE_KEYSTORE_PASSWORD"
+      KEY_PASS="env:ALARM_RELEASE_KEY_PASSWORD"
+      SIGNING_MODE="release (configured keystore)"
+    else
+      KEYSTORE="${SCRIPT_DIR}/release.keystore"
+      if [ ! -f "${KEYSTORE}" ]; then
+        echo "--> Generating standalone release keystore..."
+        "${KEYTOOL_BIN}" -genkeypair -v -keystore "${KEYSTORE}" \
+          -storepass androidrelease -alias alarmreleasekey -keypass androidrelease \
+          -keyalg RSA -keysize 2048 -validity 10000 \
+          -dname "CN=Smart Alarm Release,O=Edom,C=CN" 2>/dev/null
+        echo "WARNING: a throwaway release keystore was generated at ${KEYSTORE}." >&2
+        echo "         Signed APKs from different machines/CI runs will NOT upgrade each other." >&2
+        echo "         Configure ALARM_RELEASE_KEYSTORE/ALARM_RELEASE_KEY_ALIAS/" >&2
+        echo "         ALARM_RELEASE_KEYSTORE_PASSWORD/ALARM_RELEASE_KEY_PASSWORD to reuse one key." >&2
+      fi
+      KEY_ALIAS="alarmreleasekey"
+      KS_PASS="pass:androidrelease"
+      KEY_PASS="pass:androidrelease"
+      SIGNING_MODE="release (local keystore)"
+    fi
+    DEFAULT_APK="${OUTPUT_DIR}/alarm_release_apk.apk"
+  else
+    KEYSTORE="${SCRIPT_DIR}/debug.keystore"
+    if [ ! -f "${KEYSTORE}" ]; then
+      echo "--> Generating debug keystore..."
+      "${KEYTOOL_BIN}" -genkeypair -v -keystore "${KEYSTORE}" \
+        -storepass android -alias androiddebugkey -keypass android \
+        -keyalg RSA -keysize 2048 -validity 10000 \
+        -dname "CN=Android Debug,O=Android,C=US" 2>/dev/null
+    fi
+    KEY_ALIAS="androiddebugkey"
+    KS_PASS="pass:android"
+    KEY_PASS="pass:android"
+    DEFAULT_APK="${OUTPUT_DIR}/alarm_debug_apk.apk"
+    SIGNING_MODE="debug"
+  fi
+}
+
+sign_apk() {
+  local input_apk="$1"
+  local output_apk="$2"
+  rm -f "${output_apk}"
+  "${BUILD_TOOLS}/apksigner" sign \
+    --ks "${KEYSTORE}" \
+    --ks-pass "${KS_PASS}" \
+    --key-pass "${KEY_PASS}" \
+    --ks-key-alias "${KEY_ALIAS}" \
+    --v1-signing-enabled true \
+    --v2-signing-enabled true \
+    --v3-signing-enabled true \
+    --out "${output_apk}" \
+    "${input_apk}"
+  "${BUILD_TOOLS}/apksigner" verify "${output_apk}" > /dev/null
+}
+
+if [ -f "${ANDROID_HOME}/platforms/android-34/android.jar" ]; then
+  PLATFORM_JAR="${ANDROID_HOME}/platforms/android-34/android.jar"
+elif [ -d "${ANDROID_HOME}/platforms" ]; then
+  PLATFORM_JAR="$(ls -d "${ANDROID_HOME}/platforms/android-"*/android.jar 2>/dev/null | sort -V | tail -n 1)"
+else
+  echo "error: android.jar not found under ${ANDROID_HOME}/platforms" >&2
+  exit 1
+fi
+
 OUTPUT_DIR="${REPO_ROOT}/bazel-bin/app"
 BUILD_TMP="$(mktemp -d "${TMPDIR:-/tmp}/alarm_build.XXXXXX")"
 trap 'rm -rf "${BUILD_TMP}"' EXIT
@@ -133,6 +220,22 @@ if [ -n "${OUTPUT_PATH}" ]; then
   OUTPUT_PARENT="$(dirname "${OUTPUT_PATH}")"
   mkdir -p "${OUTPUT_PARENT}"
   OUTPUT_PATH="$(cd "${OUTPUT_PARENT}" && pwd)/$(basename "${OUTPUT_PATH}")"
+fi
+
+# Signing-only mode: re-sign an existing APK with the resolved signing material.
+# Used by package_releases.sh so every ABI artifact shares the universal signer.
+if [ "${SIGN_ONLY}" = true ]; then
+  [ -f "${INPUT_APK}" ] || {
+    echo "error: input APK does not exist: ${INPUT_APK}" >&2
+    exit 1
+  }
+  resolve_signing_material
+  echo "==> Signing APK (${SIGNING_MODE})"
+  echo "    Input:  ${INPUT_APK}"
+  echo "    Output: ${OUTPUT_PATH}"
+  sign_apk "${INPUT_APK}" "${OUTPUT_PATH}"
+  echo "==> APK successfully signed: ${OUTPUT_PATH}"
+  exit 0
 fi
 
 echo "==> Building Smart Alarm APK (${BUILD_MODE} mode)"
@@ -195,62 +298,9 @@ echo "--> Running zipalign..."
 "${BUILD_TOOLS}/zipalign" -v -p 4 app_with_dex.apk app_aligned.apk > /dev/null
 
 # 7. Keystore & Signing with apksigner
-if [ "${BUILD_MODE}" = "release" ]; then
-  if [ -n "${ALARM_RELEASE_KEYSTORE:-}" ]; then
-    : "${ALARM_RELEASE_KEY_ALIAS:?set ALARM_RELEASE_KEY_ALIAS for release signing}"
-    : "${ALARM_RELEASE_KEYSTORE_PASSWORD:?set ALARM_RELEASE_KEYSTORE_PASSWORD for release signing}"
-    : "${ALARM_RELEASE_KEY_PASSWORD:?set ALARM_RELEASE_KEY_PASSWORD for release signing}"
-    [ -f "${ALARM_RELEASE_KEYSTORE}" ] || {
-      echo "error: release keystore does not exist: ${ALARM_RELEASE_KEYSTORE}" >&2
-      exit 1
-    }
-    KEYSTORE="$(cd "$(dirname "${ALARM_RELEASE_KEYSTORE}")" && pwd)/$(basename "${ALARM_RELEASE_KEYSTORE}")"
-    KEY_ALIAS="${ALARM_RELEASE_KEY_ALIAS}"
-    KS_PASS="env:ALARM_RELEASE_KEYSTORE_PASSWORD"
-    KEY_PASS="env:ALARM_RELEASE_KEY_PASSWORD"
-  else
-    KEYSTORE="${SCRIPT_DIR}/release.keystore"
-    if [ ! -f "${KEYSTORE}" ]; then
-      echo "--> Generating standalone release keystore..."
-      "${KEYTOOL_BIN}" -genkeypair -v -keystore "${KEYSTORE}" \
-        -storepass androidrelease -alias alarmreleasekey -keypass androidrelease \
-        -keyalg RSA -keysize 2048 -validity 10000 \
-        -dname "CN=Smart Alarm Release,O=Edom,C=CN" 2>/dev/null
-    fi
-    KEY_ALIAS="alarmreleasekey"
-    KS_PASS="pass:androidrelease"
-    KEY_PASS="pass:androidrelease"
-  fi
-  DEFAULT_APK="${OUTPUT_DIR}/alarm_release_apk.apk"
-  SIGNING_MODE="release"
-else
-  KEYSTORE="${SCRIPT_DIR}/debug.keystore"
-  if [ ! -f "${KEYSTORE}" ]; then
-    echo "--> Generating debug keystore..."
-    "${KEYTOOL_BIN}" -genkeypair -v -keystore "${KEYSTORE}" \
-      -storepass android -alias androiddebugkey -keypass android \
-      -keyalg RSA -keysize 2048 -validity 10000 \
-      -dname "CN=Android Debug,O=Android,C=US" 2>/dev/null
-  fi
-  KEY_ALIAS="androiddebugkey"
-  KS_PASS="pass:android"
-  KEY_PASS="pass:android"
-  DEFAULT_APK="${OUTPUT_DIR}/alarm_debug_apk.apk"
-  SIGNING_MODE="debug"
-fi
-
+resolve_signing_material
 FINAL_APK="${OUTPUT_PATH:-${DEFAULT_APK}}"
-rm -f "${FINAL_APK}"
-"${BUILD_TOOLS}/apksigner" sign \
-  --ks "${KEYSTORE}" \
-  --ks-pass "${KS_PASS}" \
-  --key-pass "${KEY_PASS}" \
-  --ks-key-alias "${KEY_ALIAS}" \
-  --v1-signing-enabled true \
-  --v2-signing-enabled true \
-  --v3-signing-enabled true \
-  --out "${FINAL_APK}" \
-  app_aligned.apk
+sign_apk app_aligned.apk "${FINAL_APK}"
 
 APK_SIZE=$(wc -c < "${FINAL_APK}" | tr -d ' ')
 echo "==> APK successfully created: ${FINAL_APK}"
