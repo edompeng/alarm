@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# package_releases.sh: Builds and packages release bundles for mainstream platforms
-# (Android Universal, ARM64, ARMv7, x86_64, Linux, macOS).
+# package_releases.sh: Builds and packages the signed Android release APKs
+# (Universal, ARM64-v8a, ARMv7, x86_64) plus their SHA256 checksum manifest.
 # ==============================================================================
 set -euo pipefail
 
@@ -11,22 +11,10 @@ DIST_DIR="${REPO_ROOT}/dist"
 
 VERSION="${APP_VERSION_NAME:-}"
 VERSION_CODE="${APP_VERSION_CODE:-}"
-BUILD_ANDROID=true
-BUILD_CLI=true
 GENERATE_CHECKSUMS=true
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --cli-only)
-      BUILD_ANDROID=false
-      BUILD_CLI=true
-      shift
-      ;;
-    --android-only)
-      BUILD_ANDROID=true
-      BUILD_CLI=false
-      shift
-      ;;
     --skip-checksums)
       GENERATE_CHECKSUMS=false
       shift
@@ -46,7 +34,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     *)
-      echo "Unknown option: $1"
+      echo "Unknown option: $1" >&2
       exit 1
       ;;
   esac
@@ -90,121 +78,69 @@ if [ -n "${ANDROID_HOME:-}" ] && [ -d "${ANDROID_HOME}/build-tools" ]; then
   fi
 fi
 
+if [ -z "${BUILD_TOOLS}" ] || [ ! -d "${BUILD_TOOLS}" ]; then
+  echo "Error: Android build-tools not found. Ensure ANDROID_HOME is set." >&2
+  exit 1
+fi
+
 mkdir -p "${DIST_DIR}"
 
 echo "================================================================"
-echo "==> Packaging Smart Alarm Releases (v${VERSION})"
+echo "==> Packaging Smart Alarm Android Release (v${VERSION})"
 echo "    Output Directory: ${DIST_DIR}"
-echo "    Build Android:    ${BUILD_ANDROID}"
-echo "    Build CLI:        ${BUILD_CLI}"
 echo "================================================================"
 
-if [ "${BUILD_ANDROID}" = true ]; then
-  if [ -z "${BUILD_TOOLS}" ] || [ ! -d "${BUILD_TOOLS}" ]; then
-    echo "Error: Android build-tools not found. Ensure ANDROID_HOME is set." >&2
-    exit 1
-  fi
+# 1. Build Base Release APK
+BASE_APK="${DIST_DIR}/SmartAlarm-v${VERSION}-android-universal.apk"
+echo "--> Building Universal Android APK..."
+bash "${SCRIPT_DIR}/build_apk.sh" --repo-root "${REPO_ROOT}" --mode release \
+  --version-name "${VERSION}" --version-code "${VERSION_CODE}" --output "${BASE_APK}"
 
-  # 1. Build Base Release APK
-  BASE_APK="${DIST_DIR}/SmartAlarm-v${VERSION}-android-universal.apk"
-  echo "--> Building Universal Android APK..."
-  bash "${SCRIPT_DIR}/build_apk.sh" --repo-root "${REPO_ROOT}" --mode release \
-    --version-name "${VERSION}" --version-code "${VERSION_CODE}" --output "${BASE_APK}"
+# Helper to produce ABI-specific APKs
+package_abi_apk() {
+  local abi="$1"
+  local target_apk="${DIST_DIR}/SmartAlarm-v${VERSION}-android-${abi}.apk"
+  echo "--> Packaging Android APK for ${abi}..."
 
-  # Helper to produce ABI-specific APKs
-  package_abi_apk() {
-    local abi="$1"
-    local target_apk="${DIST_DIR}/SmartAlarm-v${VERSION}-android-${abi}.apk"
-    echo "--> Packaging Android APK for ${abi}..."
-    
-    local TMP_DIR
-    TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/alarm_abi_${abi}.XXXXXX")"
-    trap 'rm -rf "${TMP_DIR}"' RETURN
-    
-    cp "${BASE_APK}" "${TMP_DIR}/base.apk"
-    mkdir -p "${TMP_DIR}/lib/${abi}"
-    echo "Smart Alarm native bridge ABI marker: ${abi}" > "${TMP_DIR}/lib/${abi}/libalarm_marker.so"
-    
-    (cd "${TMP_DIR}" && zip -u -q -0 base.apk "lib/${abi}/libalarm_marker.so")
-    
-    # Zipalign
-    "${BUILD_TOOLS}/zipalign" -v -p 4 "${TMP_DIR}/base.apk" "${TMP_DIR}/aligned.apk" > /dev/null
-    
-    # Sign with the configured release material so every ABI artifact shares the
-    # universal APK's signer (CI secrets or scripts/release.keystore).
-    bash "${SCRIPT_DIR}/build_apk.sh" --sign-only --mode release \
-      --input "${TMP_DIR}/aligned.apk" --output "${target_apk}"
+  local TMP_DIR
+  TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/alarm_abi_${abi}.XXXXXX")"
+  trap 'rm -rf "${TMP_DIR}"' RETURN
 
-    echo "    Created: $(basename "${target_apk}") ($(wc -c < "${target_apk}" | tr -d ' ') bytes)"
-  }
+  cp "${BASE_APK}" "${TMP_DIR}/base.apk"
+  mkdir -p "${TMP_DIR}/lib/${abi}"
+  echo "Smart Alarm native bridge ABI marker: ${abi}" > "${TMP_DIR}/lib/${abi}/libalarm_marker.so"
 
-  # 2. Produce Mainstream Android ABIs
-  package_abi_apk "arm64-v8a"
-  package_abi_apk "armeabi-v7a"
-  package_abi_apk "x86_64"
-fi
+  (cd "${TMP_DIR}" && zip -u -q -0 base.apk "lib/${abi}/libalarm_marker.so")
 
-if [ "${BUILD_CLI}" = true ]; then
-  # 3. Desktop / CLI Bundle for Current Host OS
-  if command -v bazel >/dev/null 2>&1; then
-    BAZEL_BIN="bazel"
-  elif [ -x "/opt/homebrew/bin/bazel" ]; then
-    BAZEL_BIN="/opt/homebrew/bin/bazel"
-  else
-    BAZEL_BIN="bazel"
-  fi
+  # Zipalign
+  "${BUILD_TOOLS}/zipalign" -v -p 4 "${TMP_DIR}/base.apk" "${TMP_DIR}/aligned.apk" > /dev/null
 
-  echo "--> Building native CLI binary..."
-  "${BAZEL_BIN}" build --copt="-DSMART_ALARM_VERSION=\"${VERSION}\"" //cli:alarm_cli
+  # Sign with the configured release material so every ABI artifact shares the
+  # universal APK's signer (CI secrets or scripts/release.keystore).
+  bash "${SCRIPT_DIR}/build_apk.sh" --sign-only --mode release \
+    --input "${TMP_DIR}/aligned.apk" --output "${target_apk}"
 
-  CLI_BIN="${REPO_ROOT}/bazel-bin/cli/alarm_cli"
-  OS_TYPE="$(uname -s | tr '[:upper:]' '[:lower:]')"
-  ARCH_TYPE="$(uname -m)"
+  echo "    Created: $(basename "${target_apk}") ($(wc -c < "${target_apk}" | tr -d ' ') bytes)"
+}
 
-  if [ "${OS_TYPE}" = "darwin" ]; then
-    BUNDLE_NAME="SmartAlarm-v${VERSION}-macos-${ARCH_TYPE}"
-    BUNDLE_DIR="${DIST_DIR}/${BUNDLE_NAME}"
-    mkdir -p "${BUNDLE_DIR}/bin" "${BUNDLE_DIR}/config" "${BUNDLE_DIR}/include"
-    
-    cp "${CLI_BIN}" "${BUNDLE_DIR}/bin/alarm-cli"
-    chmod +x "${BUNDLE_DIR}/bin/alarm-cli"
-    cp "${REPO_ROOT}/core/src/assets/holidays_2026.json" "${BUNDLE_DIR}/config/"
-    cp "${REPO_ROOT}/README.md" "${BUNDLE_DIR}/"
-    cp -r "${REPO_ROOT}/core/src/adapter" "${BUNDLE_DIR}/include/"
-    
-    tar -czf "${DIST_DIR}/${BUNDLE_NAME}.tar.gz" -C "${DIST_DIR}" "${BUNDLE_NAME}"
-    rm -rf "${BUNDLE_DIR}"
-    echo "--> Created macOS package: ${DIST_DIR}/${BUNDLE_NAME}.tar.gz"
-  elif [ "${OS_TYPE}" = "linux" ]; then
-    BUNDLE_NAME="SmartAlarm-v${VERSION}-linux-${ARCH_TYPE}"
-    BUNDLE_DIR="${DIST_DIR}/${BUNDLE_NAME}"
-    mkdir -p "${BUNDLE_DIR}/bin" "${BUNDLE_DIR}/config" "${BUNDLE_DIR}/include"
-    
-    cp "${CLI_BIN}" "${BUNDLE_DIR}/bin/alarm-cli"
-    chmod +x "${BUNDLE_DIR}/bin/alarm-cli"
-    cp "${REPO_ROOT}/core/src/assets/holidays_2026.json" "${BUNDLE_DIR}/config/"
-    cp "${REPO_ROOT}/README.md" "${BUNDLE_DIR}/"
-    cp -r "${REPO_ROOT}/core/src/adapter" "${BUNDLE_DIR}/include/"
-    
-    tar -czf "${DIST_DIR}/${BUNDLE_NAME}.tar.gz" -C "${DIST_DIR}" "${BUNDLE_NAME}"
-    rm -rf "${BUNDLE_DIR}"
-    echo "--> Created Linux package: ${DIST_DIR}/${BUNDLE_NAME}.tar.gz"
-  fi
-fi
+# 2. Produce Mainstream Android ABIs
+package_abi_apk "arm64-v8a"
+package_abi_apk "armeabi-v7a"
+package_abi_apk "x86_64"
 
 # Clean up any leftover .idsig files from apksigner
 rm -f "${DIST_DIR}"/*.idsig
 
 if [ "${GENERATE_CHECKSUMS}" = true ]; then
-  # 4. Generate SHA256 Checksums
+  # 3. Generate SHA256 Checksums
   echo "--> Generating SHA256SUMS.txt..."
   (
     cd "${DIST_DIR}"
     rm -f SHA256SUMS.txt
     if command -v sha256sum >/dev/null 2>&1; then
-      sha256sum SmartAlarm-v*.apk SmartAlarm-v*.tar.gz > SHA256SUMS.txt
+      sha256sum SmartAlarm-v*.apk > SHA256SUMS.txt
     elif command -v shasum >/dev/null 2>&1; then
-      shasum -a 256 SmartAlarm-v*.apk SmartAlarm-v*.tar.gz > SHA256SUMS.txt
+      shasum -a 256 SmartAlarm-v*.apk > SHA256SUMS.txt
     fi
   )
 fi

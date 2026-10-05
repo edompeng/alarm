@@ -215,33 +215,28 @@ bash scripts/verify_device.sh <device-serial>
 
 ---
 
-## 🚀 持续集成与全平台发布 (CI/CD & Releases)
+## 🚀 持续集成与发布 (CI/CD & Releases)
 
-项目在 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 中配置了全自动持续集成与多平台发布流水线：
+项目在 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 中配置了全自动持续集成与发布流水线：
 - **触发条件**：代码推送到 `master`/`main` 分支、发布版本标签（如 `v1.0.0`）或提交 Pull Request。
-- **矩阵与并发流水线**：
-  1. **Android & Linux 构建与验证 Job**（Ubuntu-latest）：
+- **流水线**：
+  1. **Android 构建与验证 Job**（Ubuntu-latest）：
      - 执行 Python 节假日规则自检与一致性测试；
      - 执行 Java 框架解耦单元测试；
      - 执行 Bazel C++ 核心单元测试；
-     - 自动化构建 Android 全架构 Release APK（Universal、ARM64-v8a、ARMv7、x86_64）及 Linux x86_64 原生发行包；
+     - 自动化构建 Android 全架构 Release APK（Universal、ARM64-v8a、ARMv7、x86_64）；
      - 通过 `apksigner` 执行全量签名校验（v1/v2/v3 签名方案）；
-     - 执行 Linux 原生 CLI 工具冒烟测试；
-     - 归档平台构建产物。
-  2. **macOS 跨平台构建 Job**（macOS-latest Apple Silicon）：
-     - 编译核心业务层并运行 C++ 测试；
-     - 构建 macOS Apple Silicon (`macos-arm64`) 原生发行包与 `alarm-cli` 命令行工具；
-     - 执行 macOS 平台冒烟测试。
-  3. **GitHub Releases 自动化发布 Job**：
+     - 归档 Android 构建产物。
+  2. **GitHub Releases 自动化发布 Job**：
      - 当代码合并至主干或打版本 Tag 时触发；
-     - 自动聚合全平台发行包，生成统一的 `SHA256SUMS.txt` 校验和；
-     - 自动发布或更新至 [GitHub Releases 页面](https://github.com/edompeng/alarm/releases)，挂载全部主流平台安装与运行包。
+     - 自动聚合 Android 发行包，生成统一的 `SHA256SUMS.txt` 校验和；
+     - 自动发布或更新至 [GitHub Releases 页面](https://github.com/edompeng/alarm/releases)，挂载全部 Android 安装包。
 
 ---
 
-## 📦 主流平台发行包清单 (Release Packages)
+## 📦 Android 发行包清单 (Release Packages)
 
-版本号采用 **`<基准Tag>-<东八区实时时间>`** 格式动态生成（例如 `v1.0.0-20261005133015`）：基准 Tag 取仓库最新 tag，时间戳取构建当时的东八区时间（精确到秒），因此**每次推送都会生成新的版本号与 Release**；版本号同时在 App 主界面及设置弹窗中显示。发布页面提供以下主流平台二进制文件及校验码：
+版本号采用 **`<基准Tag>-<东八区实时时间>`** 格式动态生成（例如 `v1.0.0-20261005133015`）：基准 Tag 取仓库最新 tag，时间戳取构建当时的东八区时间（精确到秒），因此**每次推送都会生成新的版本号与 Release**；版本号同时在 App 主界面及设置弹窗中显示。发布页面提供以下 Android 安装包及校验码：
 
 | 发行包文件名 | 适用平台与架构 | 说明 |
 |---|---|---|
@@ -249,25 +244,4 @@ bash scripts/verify_device.sh <device-serial>
 | `SmartAlarm-v<版本>-android-arm64-v8a.apk` | Android 64位 ARM | 针对现代旗舰与主流芯片深度优化 |
 | `SmartAlarm-v<版本>-android-armeabi-v7a.apk` | Android 32位 ARM | 适配老旧设备与特定嵌入式硬件 |
 | `SmartAlarm-v<版本>-android-x86_64.apk` | Android x86_64 | 适配 Android 模拟器与 x86 桌面设备 |
-| `SmartAlarm-v<版本>-linux-x86_64.tar.gz` | Linux x86_64 | 包含 `alarm-cli` 命令行工具、头文件与 2026 日历库 |
-| `SmartAlarm-v<版本>-macos-arm64.tar.gz` | macOS (Apple Silicon) | 包含 `alarm-cli` 命令行工具、头文件与 2026 日历库 |
-| `SHA256SUMS.txt` | 全平台校验和 | SHA256 安全完整性校验清单 |
-
----
-
-## 💻 跨平台命令行工具 (alarm-cli)
-
-除了 Android 移动端应用外，项目还提供了独立的跨平台命令行工具 `alarm-cli`，可直接在 Linux / macOS / 终端运行：
-
-```bash
-# 1. 编译 alarm-cli
-bazel build //cli:alarm_cli
-
-# 2. 按工作周规则判别日期类型（工作日 / 周末）
-./bazel-bin/cli/alarm_cli check-date 2026-10-01
-
-# 3. 查看版本与运行平台信息
-./bazel-bin/cli/alarm_cli version
-```
-
-> `check-date` 目前只使用内置的工作周规则；法定节假日与调休数据保存在应用侧（`holidays_2026.json` 与 SQLite），CLI 尚未读取。
+| `SHA256SUMS.txt` | 安装包校验和 | SHA256 安全完整性校验清单 |
