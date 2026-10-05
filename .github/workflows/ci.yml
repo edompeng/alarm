@@ -35,14 +35,16 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Android SDK Components
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Ensure Android SDK components
         run: |
-          echo "ANDROID_HOME=${ANDROID_SDK_ROOT}" >> $GITHUB_ENV
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
       - name: Set up Bazelisk
-        uses: bazel-contrib/setup-bazelisk@v0.8.5
+        uses: bazelbuild/setup-bazelisk@v3
 
       - name: Run Python Holiday Config Tests
         run: |
@@ -68,7 +70,7 @@ jobs:
 
       - name: Verify Release APK Signature and Alignment
         run: |
-          $ANDROID_SDK_ROOT/build-tools/34.0.0/apksigner verify --verbose bazel-bin/app/alarm_release_apk.apk
+          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose bazel-bin/app/alarm_release_apk.apk
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
