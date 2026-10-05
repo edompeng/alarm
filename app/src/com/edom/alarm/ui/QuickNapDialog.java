@@ -37,7 +37,7 @@ public class QuickNapDialog extends Dialog {
         if (mListener != null) {
             mListener.onNapSelected(minutes);
         }
-        Toast.makeText(getContext(), "Quick Nap set for " + minutes + " minutes", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), getContext().getString(R.string.toast_nap_duration_set, minutes), Toast.LENGTH_SHORT).show();
         dismiss();
     }
 }

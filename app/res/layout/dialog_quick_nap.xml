@@ -25,7 +25,7 @@
             android:layout_height="64dp"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:text="15 Minutes" />
+            android:text="@string/minutes_15" />
 
         <Button
             android:id="@+id/btn_nap_choice_30"
@@ -33,7 +33,7 @@
             android:layout_height="64dp"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:text="30 Minutes" />
+            android:text="@string/minutes_30" />
 
         <Button
             android:id="@+id/btn_nap_choice_45"
@@ -41,7 +41,7 @@
             android:layout_height="64dp"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:text="45 Minutes" />
+            android:text="@string/minutes_45" />
 
         <Button
             android:id="@+id/btn_nap_choice_60"
@@ -49,7 +49,7 @@
             android:layout_height="64dp"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:text="60 Minutes" />
+            android:text="@string/minutes_60" />
     </GridLayout>
 
 </LinearLayout>

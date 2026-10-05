@@ -11,7 +11,7 @@
         android:id="@+id/tv_dialog_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Set Alarm Time"
+        android:text="@string/set_alarm_time"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@color/text_primary"
@@ -42,7 +42,7 @@
                 android:id="@+id/et_alarm_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Alarm Label (e.g. Wake up)"
+                android:hint="@string/alarm_label_hint"
                 android:maxLines="1"
                 android:inputType="text"
                 android:layout_marginBottom="12dp" />
@@ -51,7 +51,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Repeat Mode"
+                android:text="@string/repeat_mode"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary"
                 android:layout_marginBottom="6dp" />
@@ -67,20 +67,20 @@
                     android:id="@+id/rb_repeat_once"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Ring Once (Default)"
+                    android:text="@string/repeat_once_default"
                     android:checked="true" />
 
                 <RadioButton
                     android:id="@+id/rb_repeat_workdays"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Statutory Workdays (法定工作日 / 调休补班)" />
+                    android:text="@string/repeat_statutory_workdays" />
 
                 <RadioButton
                     android:id="@+id/rb_repeat_custom"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Custom Days of Week" />
+                    android:text="@string/repeat_custom_days" />
             </RadioGroup>
 
             <!-- Custom Days Row (Mon - Sun) -->
@@ -98,9 +98,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textOn="M"
-                    android:textOff="M"
-                    android:text="M"
+                    android:textOn="@string/day_mon_short"
+                    android:textOff="@string/day_mon_short"
+                    android:text="@string/day_mon_short"
                     android:textSize="12sp" />
 
                 <ToggleButton
@@ -108,9 +108,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textOn="T"
-                    android:textOff="T"
-                    android:text="T"
+                    android:textOn="@string/day_tue_short"
+                    android:textOff="@string/day_tue_short"
+                    android:text="@string/day_tue_short"
                     android:textSize="12sp" />
 
                 <ToggleButton
@@ -118,9 +118,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textOn="W"
-                    android:textOff="W"
-                    android:text="W"
+                    android:textOn="@string/day_wed_short"
+                    android:textOff="@string/day_wed_short"
+                    android:text="@string/day_wed_short"
                     android:textSize="12sp" />
 
                 <ToggleButton
@@ -128,9 +128,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textOn="T"
-                    android:textOff="T"
-                    android:text="T"
+                    android:textOn="@string/day_thu_short"
+                    android:textOff="@string/day_thu_short"
+                    android:text="@string/day_thu_short"
                     android:textSize="12sp" />
 
                 <ToggleButton
@@ -138,9 +138,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textOn="F"
-                    android:textOff="F"
-                    android:text="F"
+                    android:textOn="@string/day_fri_short"
+                    android:textOff="@string/day_fri_short"
+                    android:text="@string/day_fri_short"
                     android:textSize="12sp" />
 
                 <ToggleButton
@@ -148,9 +148,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textOn="S"
-                    android:textOff="S"
-                    android:text="S"
+                    android:textOn="@string/day_sat_short"
+                    android:textOff="@string/day_sat_short"
+                    android:text="@string/day_sat_short"
                     android:textSize="12sp" />
 
                 <ToggleButton
@@ -158,9 +158,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textOn="S"
-                    android:textOff="S"
-                    android:text="S"
+                    android:textOn="@string/day_sun_short"
+                    android:textOff="@string/day_sun_short"
+                    android:text="@string/day_sun_short"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -168,7 +168,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Alarm Ringtone"
+                android:text="@string/alarm_ringtone"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary"
                 android:layout_marginTop="8dp"
@@ -186,7 +186,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Default Alarm Sound"
+                    android:text="@string/default_alarm_sound"
                     android:textSize="14sp"
                     android:textColor="@color/text_primary" />
 
@@ -194,7 +194,7 @@
                     android:id="@+id/btn_pick_ringtone"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Choose" />
+                    android:text="@string/choose_ringtone" />
             </LinearLayout>
 
             <!-- Vibrate Switch Row -->
@@ -209,7 +209,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Vibrate on Ring"
+                    android:text="@string/vibrate_on_ring"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary" />
 
@@ -234,7 +234,7 @@
             android:id="@+id/btn_delete_alarm"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Delete"
+            android:text="@string/delete"
             android:textColor="#FF0000"
             android:visibility="gone"
             android:layout_marginEnd="8dp" />
@@ -243,14 +243,14 @@
             android:id="@+id/btn_cancel_alarm"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Cancel"
+            android:text="@string/cancel"
             android:layout_marginEnd="8dp" />
 
         <Button
             android:id="@+id/btn_save_alarm"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Save"
+            android:text="@string/save"
             android:backgroundTint="@color/primary"
             android:textColor="#FFFFFF" />
     </LinearLayout>

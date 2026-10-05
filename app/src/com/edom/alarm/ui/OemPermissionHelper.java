@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.widget.Toast;
+import com.edom.alarm.R;
 
 /**
  * Helper for OEM specific background activity, high power consumption,
@@ -100,7 +101,7 @@ public class OemPermissionHelper {
                 fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity(fallback);
             } catch (Exception e) {
-                Toast.makeText(context, "Could not open settings: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, R.string.alarm_protection_open_settings_failed, Toast.LENGTH_SHORT).show();
             }
         }
     }

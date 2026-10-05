@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Select Ringtone Source (选择铃声来源)"
+        android:text="@string/ringtone_picker_title"
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp" />
@@ -22,26 +22,26 @@
             android:id="@+id/rb_local_chime"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Local Gentle Chime (本地轻柔铃声)"
+            android:text="@string/ringtone_local_chime"
             android:checked="true" />
 
         <RadioButton
             android:id="@+id/rb_dynamic_weather"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Dynamic Weather Soundscape (动态天气音效)" />
+            android:text="@string/ringtone_dynamic_weather" />
 
         <RadioButton
             android:id="@+id/rb_qq_music"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="QQ Music Daily Radar (QQ音乐每日雷达)" />
+            android:text="@string/ringtone_qq_music" />
 
         <RadioButton
             android:id="@+id/rb_netease_music"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="NetEase Cloud Music Daily (网易云每日推荐)" />
+            android:text="@string/ringtone_netease_music" />
     </RadioGroup>
 
     <Button
@@ -49,6 +49,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Confirm Selection" />
+        android:text="@string/ringtone_confirm" />
 
 </LinearLayout>

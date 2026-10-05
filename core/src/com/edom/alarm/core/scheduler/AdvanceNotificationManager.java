@@ -93,9 +93,9 @@ public class AdvanceNotificationManager {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID_ADVANCE,
-                    "Upcoming Alarm Alerts",
+                    context.getString(R.string.advance_notification_channel),
                     NotificationManager.IMPORTANCE_DEFAULT);
-            channel.setDescription("Gentle advance notifications with Quick Dismiss option");
+            channel.setDescription(context.getString(R.string.advance_notification_channel_description));
             NotificationManager nm = context.getSystemService(NotificationManager.class);
             if (nm != null) {
                 nm.createNotificationChannel(channel);

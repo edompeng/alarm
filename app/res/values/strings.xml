@@ -6,7 +6,7 @@
     <string name="snooze">Snooze</string>
     <string name="dismiss">Dismiss</string>
     <string name="skip_today">Skip Today</string>
-    <string name="vacation_mode">Skip Multiple Days</string>
+    <string name="vacation_mode">Vacation Mode (Skip Multiple Days)</string>
     <string name="alarm_options">Alarm Options</string>
     <string name="alarm_ringing_toast_prefix">Alarm will ring in </string>
     <string name="settings">Settings</string>
@@ -53,9 +53,9 @@
     <string name="nap_edit_title">Edit Quick Nap Preset</string>
     <string name="duration">Duration</string>
     <string name="unit">Unit</string>
-    <string name="holiday_sync_title">Statutory Holiday Sync</string>
-    <string name="holiday_sync_url_label">Remote Holiday Config URL</string>
-    <string name="reset_url">Reset</string>
+    <string name="holiday_sync_title">Statutory Holiday &amp; Workday Sync</string>
+    <string name="holiday_sync_url_label">Holiday Config Subscription URL</string>
+    <string name="reset_url">Reset Default</string>
     <string name="sync_now">Sync Now</string>
     <string name="sync_in_progress">Syncing...</string>
     <string name="sync_success">Holiday rules updated (%1$d holidays, %2$d workdays)</string>
@@ -66,22 +66,87 @@
     <string name="oem_settings_samsung_title">Samsung One UI Background Optimization</string>
     <string name="oem_settings_samsung_btn">Allow Background Activity &amp; Never Sleep</string>
     <string name="alarm_protection_open_settings_failed">Unable to open system settings page</string>
-    <string name="clear_skips">Clear Skips</string>
+    <string name="clear_skips">Clear All Skips</string>
     <string name="clear_skips_confirm">Clear all skipped dates for this alarm?</string>
     <string name="alarm_ringing">Alarm ringing</string>
     <string name="dismiss_alarm">Dismiss alarm</string>
     <string name="alarm_notification_channel">Alarm ringing</string>
     <string name="alarm_notification_channel_description">Active alarm audio and vibration</string>
-    <string name="alarm_protection_limited">Alarm delivery protection needs attention</string>
+    <string name="advance_notification_channel">Upcoming Alarm Alerts</string>
+    <string name="advance_notification_channel_description">Gentle advance notifications with quick dismiss option</string>
+    <string name="alarm_protection_limited">Alarm delivery protection needs setup</string>
     <string name="alarm_protection_exact_limited">Allow Alarms &amp; reminders for exact delivery.</string>
     <string name="alarm_protection_notification_limited">Allow notifications so a ringing alarm remains visible.</string>
     <string name="alarm_protection_full_screen_limited">Allow full-screen alarms for lock-screen presentation.</string>
     <string name="alarm_protection_registration_failed">Registration failed for alarm IDs: %1$s. Tap to retry.</string>
     <string name="alarm_protection_best_effort">Exact access is unavailable; alarms are scheduled best effort and may be late.</string>
-    <string name="alarm_protection_fix">Fix highest-impact setting</string>
-    <string name="alarm_protection_help">Alarm protection and force-stop guidance</string>
+    <string name="alarm_protection_fix">Fix Permissions</string>
+    <string name="alarm_protection_help">Background Keep-Alive &amp; Protection Guide</string>
     <string name="alarm_force_stop_guidance">After Force stop or revoking exact-alarm access, Android blocks delivery until you explicitly reopen the app.</string>
     <string name="missed_alarm_once">A one-time alarm was missed and has been disabled: %1$s</string>
     <string name="missed_alarm_quick_nap">A Quick Nap alarm was missed and removed: %1$s</string>
     <string name="missed_alarm_recurring">A recurring alarm was missed and advanced: %1$s</string>
+
+    <!-- Ringtone Picker -->
+    <string name="ringtone_picker_title">Select Ringtone Source</string>
+    <string name="ringtone_local_chime">Local Gentle Chime</string>
+    <string name="ringtone_dynamic_weather">Dynamic Weather Soundscape</string>
+    <string name="ringtone_qq_music">QQ Music Daily Radar</string>
+    <string name="ringtone_netease_music">NetEase Cloud Music Daily</string>
+    <string name="ringtone_confirm">Confirm Selection</string>
+
+    <!-- Alarm Ringtone Selection Dialog -->
+    <string name="select_alarm_sound">Select Alarm Sound</string>
+    <string name="default_alarm_sound">Default Alarm Sound</string>
+    <string name="ringtone_classic_bell">Classic Bell</string>
+    <string name="ringtone_digital_beep">Digital Beep</string>
+
+    <!-- Alarm Edit Dialog -->
+    <string name="set_alarm_time">Set Alarm Time</string>
+    <string name="add_alarm_title">Add New Alarm</string>
+    <string name="alarm_label_hint">Alarm Label (e.g. Wake up)</string>
+    <string name="repeat_mode">Repeat Mode</string>
+    <string name="repeat_once_default">Ring Once (Default)</string>
+    <string name="repeat_statutory_workdays">Statutory Workdays</string>
+    <string name="repeat_custom_days">Custom Days of Week</string>
+    <string name="alarm_ringtone">Alarm Ringtone</string>
+    <string name="choose_ringtone">Choose</string>
+    <string name="vibrate_on_ring">Vibrate on Ring</string>
+    <string name="delete">Delete</string>
+    <string name="default_alarm_label">Alarm</string>
+
+    <!-- Days for Custom Repeat Toggle Buttons -->
+    <string name="day_mon_short">M</string>
+    <string name="day_tue_short">T</string>
+    <string name="day_wed_short">W</string>
+    <string name="day_thu_short">T</string>
+    <string name="day_fri_short">F</string>
+    <string name="day_sat_short">S</string>
+    <string name="day_sun_short">S</string>
+
+    <!-- Alarm Card Recurrence Text -->
+    <string name="repeat_every_day">Every Day</string>
+    <string name="repeat_mon_to_fri">Mon - Fri</string>
+    <string name="repeat_weekends">Weekends</string>
+    <string name="repeat_once">Ring Once</string>
+    <string name="vacation_badge_format">Vacation (%1$d skipped)</string>
+
+    <!-- Skip Confirmation Dialog -->
+    <string name="confirm_vacation_skip_title">Confirm Vacation Skip</string>
+    <string name="confirm_vacation_skip_msg_header">The alarm will be skipped on the following dates:\n\n</string>
+    <string name="confirm_vacation_skip_msg_footer">\nAll other scheduled dates will ring normally. Confirm?</string>
+
+    <!-- Prompts and Toasts -->
+    <string name="delete_alarm_confirm">Are you sure you want to delete this alarm?</string>
+    <string name="toast_save_success">Saved successfully</string>
+    <string name="toast_delete_success">Alarm deleted</string>
+    <string name="toast_skips_saved">Vacation skips saved</string>
+    <string name="toast_nap_cancelled">Quick Nap cancelled and removed</string>
+    <string name="toast_nap_scheduled">Quick Nap scheduled: %1$s</string>
+    <string name="toast_nap_duration_set">Quick Nap set for %1$d minutes</string>
+    <string name="toast_alarm_enabled">%1$s alarm enabled</string>
+    <string name="toast_alarm_disabled">%1$s alarm disabled</string>
+    <string name="toast_sync_url_empty">Sync URL cannot be empty</string>
+    <string name="toast_alarm_ring_in_hm">Alarm will ring in %1$d hours %2$d minutes</string>
+    <string name="toast_alarm_ring_in_m">Alarm will ring in %1$d minutes</string>
 </resources>

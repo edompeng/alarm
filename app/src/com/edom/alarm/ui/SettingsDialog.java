@@ -157,7 +157,7 @@ public class SettingsDialog extends Dialog {
         btnSyncHolidaysNow.setOnClickListener(v -> {
             String url = etHolidaySyncUrl.getText().toString().trim();
             if (url.isEmpty()) {
-                Toast.makeText(mActivity, "Sync URL cannot be empty", Toast.LENGTH_SHORT).show();
+                Toast.makeText(mActivity, R.string.toast_sync_url_empty, Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -262,7 +262,7 @@ public class SettingsDialog extends Dialog {
                 LocalizationManager.setLanguage(mActivity, selectedLang);
             }
 
-            Toast.makeText(mActivity, mActivity.getString(R.string.save) + " OK", Toast.LENGTH_SHORT).show();
+            Toast.makeText(mActivity, R.string.toast_save_success, Toast.LENGTH_SHORT).show();
             dismiss();
 
             if (mListener != null) {

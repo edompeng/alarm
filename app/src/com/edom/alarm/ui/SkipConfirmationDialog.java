@@ -2,6 +2,7 @@ package com.edom.alarm.ui;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import com.edom.alarm.R;
 import java.util.List;
 
 /**
@@ -16,21 +17,21 @@ public class SkipConfirmationDialog {
 
     public static void show(Context context, List<String> datesToSkip, OnConfirmListener listener) {
         StringBuilder msg = new StringBuilder();
-        msg.append("The alarm will be skipped on the following dates:\n\n");
+        msg.append(context.getString(R.string.confirm_vacation_skip_msg_header));
         for (String date : datesToSkip) {
             msg.append("• ").append(date).append("\n");
         }
-        msg.append("\nAll other scheduled dates will ring normally. Confirm?");
+        msg.append(context.getString(R.string.confirm_vacation_skip_msg_footer));
 
         new AlertDialog.Builder(context)
-            .setTitle("Confirm Vacation Skip (确认跳过日期)")
+            .setTitle(context.getString(R.string.confirm_vacation_skip_title))
             .setMessage(msg.toString())
-            .setPositiveButton("Confirm (确认)", (dialog, which) -> {
+            .setPositiveButton(context.getString(R.string.confirm), (dialog, which) -> {
                 if (listener != null) {
                     listener.onConfirmed();
                 }
             })
-            .setNegativeButton("Cancel (取消)", null)
+            .setNegativeButton(context.getString(R.string.cancel), null)
             .show();
     }
 }

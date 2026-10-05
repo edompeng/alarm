@@ -38,7 +38,7 @@
                 android:id="@+id/tv_alarm_repeat"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Statutory Workdays"
+                android:text="@string/statutory_workdays"
                 android:textSize="13sp"
                 android:textColor="@color/primary"
                 android:textStyle="bold" />
@@ -48,7 +48,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="Morning Wakeup"
+                android:text="@string/default_alarm_label"
                 android:textSize="13sp"
                 android:textColor="@color/text_secondary" />
         </LinearLayout>
@@ -65,7 +65,7 @@
                 android:id="@+id/tv_alarm_vacation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Vacation Mode"
+                android:text="@string/vacation_mode"
                 android:textSize="12sp"
                 android:textColor="#E65100"
                 android:textStyle="bold"
@@ -83,7 +83,7 @@
                 android:id="@+id/tv_alarm_nap_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Quick Nap"
+                android:text="@string/quick_nap"
                 android:textSize="12sp"
                 android:textColor="#2E7D32"
                 android:textStyle="bold"

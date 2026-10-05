@@ -36,7 +36,7 @@ public class AlarmEditDialog extends Dialog {
     private Button mBtnDelete;
 
     private String mSelectedRingtoneUri;
-    private String mSelectedRingtoneTitle = "Default Alarm Sound";
+    private String mSelectedRingtoneTitle;
 
     public AlarmEditDialog(Context context, AlarmListAdapter.AlarmItemModel existingItem,
                            OnAlarmSavedListener listener) {
@@ -70,8 +70,10 @@ public class AlarmEditDialog extends Dialog {
 
         mTpTime.setIs24HourView(true);
 
+        String defaultSoundTitle = getContext().getString(R.string.default_alarm_sound);
+
         if (mExistingItem != null) {
-            tvTitle.setText("Edit Alarm");
+            tvTitle.setText(R.string.edit_alarm);
             mTpTime.setHour(mExistingItem.hour);
             mTpTime.setMinute(mExistingItem.minute);
             mEtLabel.setText(mExistingItem.label);
@@ -87,7 +89,7 @@ public class AlarmEditDialog extends Dialog {
             }
 
             mSelectedRingtoneUri = mExistingItem.ringtoneUri;
-            mSelectedRingtoneTitle = mExistingItem.ringtoneTitle != null ? mExistingItem.ringtoneTitle : "Default Alarm Sound";
+            mSelectedRingtoneTitle = mExistingItem.ringtoneTitle != null ? mExistingItem.ringtoneTitle : defaultSoundTitle;
             mTvRingtoneName.setText(mSelectedRingtoneTitle);
             mSwVibrate.setChecked(mExistingItem.vibrateEnabled);
 
@@ -99,7 +101,7 @@ public class AlarmEditDialog extends Dialog {
                 dismiss();
             });
         } else {
-            tvTitle.setText("Add New Alarm");
+            tvTitle.setText(R.string.add_alarm_title);
             Calendar now = Calendar.getInstance();
             now.add(Calendar.HOUR_OF_DAY, 1);
             mTpTime.setHour(now.get(Calendar.HOUR_OF_DAY));
@@ -107,8 +109,8 @@ public class AlarmEditDialog extends Dialog {
             mRgRepeat.check(R.id.rb_repeat_once);
 
             mSelectedRingtoneUri = null;
-            mSelectedRingtoneTitle = "Default Alarm Sound";
-            mTvRingtoneName.setText("Default Alarm Sound");
+            mSelectedRingtoneTitle = defaultSoundTitle;
+            mTvRingtoneName.setText(mSelectedRingtoneTitle);
             mSwVibrate.setChecked(true);
         }
 
@@ -130,7 +132,8 @@ public class AlarmEditDialog extends Dialog {
         final java.util.List<String> titles = new java.util.ArrayList<>();
         final java.util.List<String> uris = new java.util.ArrayList<>();
 
-        titles.add("Default Alarm Sound");
+        String defaultSoundTitle = getContext().getString(R.string.default_alarm_sound);
+        titles.add(defaultSoundTitle);
         android.net.Uri defaultUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM);
         uris.add(defaultUri != null ? defaultUri.toString() : "");
 
@@ -152,21 +155,21 @@ public class AlarmEditDialog extends Dialog {
         }
 
         if (titles.size() <= 1) {
-            titles.add("Classic Bell");
+            titles.add(getContext().getString(R.string.ringtone_classic_bell));
             uris.add("content://settings/system/alarm_alert");
-            titles.add("Digital Beep");
+            titles.add(getContext().getString(R.string.ringtone_digital_beep));
             uris.add("android.resource://system/alarm_beep");
         }
 
         CharSequence[] items = titles.toArray(new CharSequence[0]);
         new android.app.AlertDialog.Builder(getContext())
-                .setTitle("Select Alarm Sound")
+                .setTitle(getContext().getString(R.string.select_alarm_sound))
                 .setItems(items, (dialog, which) -> {
                     mSelectedRingtoneTitle = titles.get(which);
                     mSelectedRingtoneUri = uris.get(which);
                     mTvRingtoneName.setText(mSelectedRingtoneTitle);
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(getContext().getString(R.string.cancel), null)
                 .show();
     }
 
@@ -175,7 +178,7 @@ public class AlarmEditDialog extends Dialog {
         int minute = mTpTime.getMinute();
         String label = mEtLabel.getText().toString().trim();
         if (label.isEmpty()) {
-            label = "Alarm";
+            label = getContext().getString(R.string.default_alarm_label);
         }
 
         int repeatMode = 0; // default once

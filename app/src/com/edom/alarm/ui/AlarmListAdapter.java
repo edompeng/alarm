@@ -129,15 +129,16 @@ public class AlarmListAdapter extends BaseAdapter {
 
         AlarmItemModel item = getItem(position);
         holder.tvTime.setText(String.format("%02d:%02d", item.hour, item.minute));
-        holder.tvLabel.setText(item.label != null && !item.label.isEmpty() ? item.label : "Alarm");
+        holder.tvLabel.setText(item.label != null && !item.label.isEmpty()
+                ? item.label : mContext.getString(R.string.default_alarm_label));
 
         // Format recurrence summary
         if (item.isQuickNap) {
-            holder.tvRepeat.setText("Quick Nap");
+            holder.tvRepeat.setText(mContext.getString(R.string.quick_nap));
         } else if (item.repeatMode == 2) {
-            holder.tvRepeat.setText("Statutory Workdays (法定工作日)");
+            holder.tvRepeat.setText(mContext.getString(R.string.statutory_workdays));
         } else if (item.repeatMode == 0) {
-            holder.tvRepeat.setText("Ring Once");
+            holder.tvRepeat.setText(mContext.getString(R.string.repeat_once));
         } else {
             holder.tvRepeat.setText(formatDaysBitmask(item.daysBitmask));
         }
@@ -145,7 +146,7 @@ public class AlarmListAdapter extends BaseAdapter {
         // Render Vacation and Nap Badges
         if (item.skippedDates != null && !item.skippedDates.isEmpty()) {
             holder.tvVacation.setVisibility(View.VISIBLE);
-            holder.tvVacation.setText(String.format("Vacation (%d skipped)", item.skippedDates.size()));
+            holder.tvVacation.setText(mContext.getString(R.string.vacation_badge_format, item.skippedDates.size()));
             holder.tvVacation.setOnClickListener(v -> {
                 if (mVacationBadgeClickListener != null) {
                     mVacationBadgeClickListener.onVacationBadgeClick(item);
@@ -158,6 +159,7 @@ public class AlarmListAdapter extends BaseAdapter {
 
         if (item.isQuickNap) {
             holder.tvNapBadge.setVisibility(View.VISIBLE);
+            holder.tvNapBadge.setText(mContext.getString(R.string.quick_nap));
         } else {
             holder.tvNapBadge.setVisibility(View.GONE);
         }
@@ -190,18 +192,26 @@ public class AlarmListAdapter extends BaseAdapter {
     }
 
     private String formatDaysBitmask(int bitmask) {
-        if (bitmask == 0x7F) return "Every Day";
-        if (bitmask == 0x3E) return "Mon - Fri";
-        if (bitmask == 0x41) return "Weekends";
+        if (bitmask == 0x7F) return mContext.getString(R.string.repeat_every_day);
+        if (bitmask == 0x3E) return mContext.getString(R.string.repeat_mon_to_fri);
+        if (bitmask == 0x41) return mContext.getString(R.string.repeat_weekends);
         StringBuilder sb = new StringBuilder();
-        String[] days = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+        String[] days = {
+            mContext.getString(R.string.sun),
+            mContext.getString(R.string.mon),
+            mContext.getString(R.string.tue),
+            mContext.getString(R.string.wed),
+            mContext.getString(R.string.thu),
+            mContext.getString(R.string.fri),
+            mContext.getString(R.string.sat)
+        };
         for (int i = 0; i < 7; i++) {
             if ((bitmask & (1 << i)) != 0) {
                 if (sb.length() > 0) sb.append(", ");
                 sb.append(days[i]);
             }
         }
-        return sb.length() > 0 ? sb.toString() : "Ring Once";
+        return sb.length() > 0 ? sb.toString() : mContext.getString(R.string.repeat_once);
     }
 
     private static class ViewHolder {

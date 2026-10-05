@@ -75,7 +75,7 @@ public class HolidaySyncManager {
             OnHolidayRulesUpdatedListener rulesUpdatedListener) {
         if (urlString == null || urlString.trim().isEmpty()) {
             if (callback != null) {
-                MAIN_HANDLER.post(() -> callback.onError("Sync URL cannot be empty"));
+                MAIN_HANDLER.post(() -> callback.onError(context.getString(R.string.toast_sync_url_empty)));
             }
             return;
         }

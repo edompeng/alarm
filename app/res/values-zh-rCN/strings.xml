@@ -2,14 +2,14 @@
 <resources>
     <string name="app_name">智能闹钟</string>
     <string name="statutory_workdays">法定工作日</string>
-    <string name="quick_nap">快速午休</string>
+    <string name="quick_nap">快速小憩</string>
     <string name="snooze">稍后提醒</string>
     <string name="dismiss">关闭</string>
     <string name="skip_today">跳过今天</string>
-    <string name="vacation_mode">跳过多天</string>
+    <string name="vacation_mode">休假模式 (跳过多天)</string>
     <string name="alarm_options">闹钟选项</string>
     <string name="alarm_ringing_toast_prefix">闹钟将在 </string>
-    <string name="settings">软件设置</string>
+    <string name="settings">设置</string>
     <string name="language">语言设置</string>
     <string name="language_system">跟随系统</string>
     <string name="language_zh">简体中文</string>
@@ -21,7 +21,7 @@
     <string name="minutes_30">30分钟 (默认)</string>
     <string name="minutes_45">45分钟</string>
     <string name="minutes_60">60分钟</string>
-    <string name="nap_slots_customization">快速午休档位设置</string>
+    <string name="nap_slots_customization">快速小憩档位设置</string>
     <string name="nap_slot_1">档位 1</string>
     <string name="nap_slot_2">档位 2</string>
     <string name="nap_slot_3">档位 3</string>
@@ -29,7 +29,7 @@
     <string name="unit_minutes">分钟</string>
     <string name="unit_hours">小时</string>
     <string name="unit_min_short">分</string>
-    <string name="unit_hr_short">小时</string>
+    <string name="unit_hr_short">时</string>
     <string name="save">保存</string>
     <string name="cancel">取消</string>
     <string name="add_alarm">+ 添加闹钟</string>
@@ -37,7 +37,7 @@
     <string name="edit_alarm">编辑闹钟</string>
     <string name="delete_alarm">删除闹钟</string>
     <string name="select_dates_to_skip">选择跳过响铃日期:</string>
-    <string name="save_skips">保存设置</string>
+    <string name="save_skips">保存跳过日期</string>
     <string name="confirm">确定</string>
     <string name="upcoming_alarm">即将响铃</string>
     <string name="alarm_rings_in">闹钟将在 %1$d 分钟后响铃</string>
@@ -50,38 +50,103 @@
     <string name="thu">四</string>
     <string name="fri">五</string>
     <string name="sat">六</string>
-    <string name="nap_edit_title">修改快速午休档位</string>
+    <string name="nap_edit_title">修改快速小憩档位</string>
     <string name="duration">时长</string>
     <string name="unit">单位</string>
-    <string name="holiday_sync_title">法定节假日与补班同步</string>
-    <string name="holiday_sync_url_label">假日配置文件地址 (URL)</string>
+    <string name="holiday_sync_title">法定节假日及调休补班同步</string>
+    <string name="holiday_sync_url_label">节假日配置订阅源地址 (URL)</string>
     <string name="reset_url">恢复默认</string>
     <string name="sync_now">立即同步</string>
     <string name="sync_in_progress">正在同步...</string>
-    <string name="sync_success">假日配置更新成功 (%1$d天节假日, %2$d天补班)</string>
+    <string name="sync_success">节假日规则更新成功（%1$d 天法定节假日，%2$d 天调休补班）</string>
     <string name="sync_failed_title">更新失败</string>
     <string name="sync_failed_msg">法定节假日配置更新失败:\n%1$s\n\n已有本地配置保持不变。</string>
     <string name="oem_settings_title">OriginOS 后台保活设置</string>
     <string name="oem_settings_btn">允许后台高耗电与自启动设置</string>
     <string name="oem_settings_samsung_title">Samsung One UI 后台保活设置</string>
     <string name="oem_settings_samsung_btn">允许后台活动与电池无限制 (从不休眠)</string>
-    <string name="alarm_protection_open_settings_failed">无法直接打开系统设置页面</string>
-    <string name="clear_skips">清除跳过</string>
-    <string name="clear_skips_confirm">确定清除该闹钟的所有跳过日期吗？</string>
+    <string name="alarm_protection_open_settings_failed">无法打开系统设置页面</string>
+    <string name="clear_skips">清空跳过日期</string>
+    <string name="clear_skips_confirm">确定清空该闹钟的所有跳过日期吗？</string>
     <string name="alarm_ringing">闹钟正在响铃</string>
     <string name="dismiss_alarm">关闭闹钟</string>
     <string name="alarm_notification_channel">闹钟响铃</string>
     <string name="alarm_notification_channel_description">当前闹钟的声音与振动</string>
-    <string name="alarm_protection_limited">闹钟送达保护需要处理</string>
-    <string name="alarm_protection_exact_limited">请允许“闹钟和提醒”权限以便准时送达。</string>
-    <string name="alarm_protection_notification_limited">请允许通知，以便响铃状态持续可见。</string>
-    <string name="alarm_protection_full_screen_limited">请允许全屏闹钟，以便在锁屏上显示。</string>
+    <string name="advance_notification_channel">即将响铃提醒</string>
+    <string name="advance_notification_channel_description">响铃前的提前提醒通知，支持快捷关闭</string>
+    <string name="alarm_protection_limited">闹钟准时送达受限，需要配置权限</string>
+    <string name="alarm_protection_exact_limited">请允许“闹钟和提醒”权限，以确保闹钟准时响铃。</string>
+    <string name="alarm_protection_notification_limited">请允许发送通知，以便响铃提醒正常展示。</string>
+    <string name="alarm_protection_full_screen_limited">请允许“全屏提醒”权限，以便在锁屏上穿透响铃。</string>
     <string name="alarm_protection_registration_failed">以下闹钟注册失败：%1$s。点击重试。</string>
-    <string name="alarm_protection_best_effort">没有精确闹钟权限，将按尽力模式调度，可能延迟。</string>
-    <string name="alarm_protection_fix">修复最关键设置</string>
-    <string name="alarm_protection_help">闹钟保护与强行停止说明</string>
-    <string name="alarm_force_stop_guidance">强行停止应用或撤销精确闹钟权限后，Android 会阻止送达，直到你主动重新打开应用。</string>
+    <string name="alarm_protection_best_effort">未开启精确闹钟权限，将以尽力模式调度，可能出现延迟。</string>
+    <string name="alarm_protection_fix">一键修复权限</string>
+    <string name="alarm_protection_help">后台保活与防杀指南</string>
+    <string name="alarm_force_stop_guidance">强行停止应用或撤销精确闹钟权限后，Android 系统将拦截闹钟送达，直到你主动重新打开应用。</string>
     <string name="missed_alarm_once">一次性闹钟已错过并停用：%1$s</string>
-    <string name="missed_alarm_quick_nap">快速午休闹钟已错过并删除：%1$s</string>
+    <string name="missed_alarm_quick_nap">快速小憩闹钟已错过并删除：%1$s</string>
     <string name="missed_alarm_recurring">重复闹钟已错过并顺延：%1$s</string>
+
+    <!-- Ringtone Picker -->
+    <string name="ringtone_picker_title">选择铃声来源</string>
+    <string name="ringtone_local_chime">本地轻柔铃声</string>
+    <string name="ringtone_dynamic_weather">动态天气音效</string>
+    <string name="ringtone_qq_music">QQ音乐 每日雷达</string>
+    <string name="ringtone_netease_music">网易云音乐 每日推荐</string>
+    <string name="ringtone_confirm">确认选择</string>
+
+    <!-- Alarm Ringtone Selection Dialog -->
+    <string name="select_alarm_sound">选择闹钟铃声</string>
+    <string name="default_alarm_sound">系统默认铃声</string>
+    <string name="ringtone_classic_bell">经典钟声</string>
+    <string name="ringtone_digital_beep">电子蜂鸣</string>
+
+    <!-- Alarm Edit Dialog -->
+    <string name="set_alarm_time">设置闹钟时间</string>
+    <string name="add_alarm_title">新建闹钟</string>
+    <string name="alarm_label_hint">闹钟标签（如：起床）</string>
+    <string name="repeat_mode">重复模式</string>
+    <string name="repeat_once_default">仅响一次（默认）</string>
+    <string name="repeat_statutory_workdays">法定工作日（智能调休）</string>
+    <string name="repeat_custom_days">自定义周期</string>
+    <string name="alarm_ringtone">闹钟铃声</string>
+    <string name="choose_ringtone">选择</string>
+    <string name="vibrate_on_ring">响铃时振动</string>
+    <string name="delete">删除</string>
+    <string name="default_alarm_label">闹钟</string>
+
+    <!-- Days for Custom Repeat Toggle Buttons -->
+    <string name="day_mon_short">一</string>
+    <string name="day_tue_short">二</string>
+    <string name="day_wed_short">三</string>
+    <string name="day_thu_short">四</string>
+    <string name="day_fri_short">五</string>
+    <string name="day_sat_short">六</string>
+    <string name="day_sun_short">日</string>
+
+    <!-- Alarm Card Recurrence Text -->
+    <string name="repeat_every_day">每天</string>
+    <string name="repeat_mon_to_fri">周一至周五</string>
+    <string name="repeat_weekends">周末</string>
+    <string name="repeat_once">仅响一次</string>
+    <string name="vacation_badge_format">休假跳过（%1$d天）</string>
+
+    <!-- Skip Confirmation Dialog -->
+    <string name="confirm_vacation_skip_title">确认休假跳过</string>
+    <string name="confirm_vacation_skip_msg_header">闹钟将在以下日期跳过响铃：\n\n</string>
+    <string name="confirm_vacation_skip_msg_footer">\n其余日期将正常响铃。是否确认？</string>
+
+    <!-- Prompts and Toasts -->
+    <string name="delete_alarm_confirm">确定要删除该闹钟吗？</string>
+    <string name="toast_save_success">保存成功</string>
+    <string name="toast_delete_success">闹钟已删除</string>
+    <string name="toast_skips_saved">休假跳过日期已保存</string>
+    <string name="toast_nap_cancelled">快速小憩已取消并移除</string>
+    <string name="toast_nap_scheduled">快速小憩已设定：%1$s</string>
+    <string name="toast_nap_duration_set">已设定 %1$d 分钟快速小憩</string>
+    <string name="toast_alarm_enabled">%1$s 闹钟已开启</string>
+    <string name="toast_alarm_disabled">%1$s 闹钟已关闭</string>
+    <string name="toast_sync_url_empty">节假日配置订阅源地址不能为空</string>
+    <string name="toast_alarm_ring_in_hm">闹钟将在 %1$d 小时 %2$d 分钟后响铃</string>
+    <string name="toast_alarm_ring_in_m">闹钟将在 %1$d 分钟后响铃</string>
 </resources>

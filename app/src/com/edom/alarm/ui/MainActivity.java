@@ -118,7 +118,7 @@ public class MainActivity extends Activity {
                 mAlarms.remove(item);
                 saveAlarms();
                 updateView();
-                Toast.makeText(this, "Quick Nap cancelled and removed", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.toast_nap_cancelled, Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -128,8 +128,9 @@ public class MainActivity extends Activity {
                 cancelAlarmInSystem(item);
             }
             saveAlarms();
-            String status = isChecked ? "enabled" : "disabled";
-            Toast.makeText(this, String.format("%02d:%02d alarm %s", item.hour, item.minute, status), Toast.LENGTH_SHORT).show();
+            String formattedTime = String.format("%02d:%02d", item.hour, item.minute);
+            int toastRes = isChecked ? R.string.toast_alarm_enabled : R.string.toast_alarm_disabled;
+            Toast.makeText(this, getString(toastRes, formattedTime), Toast.LENGTH_SHORT).show();
         });
 
         mAdapter.setOnAlarmClickListener(new AlarmListAdapter.OnAlarmClickListener() {
@@ -157,7 +158,7 @@ public class MainActivity extends Activity {
                                             saveAlarms();
                                             scheduleAlarmInSystem(item);
                                             updateView();
-                                            Toast.makeText(MainActivity.this, getString(R.string.save_skips) + " OK", Toast.LENGTH_SHORT).show();
+                                            Toast.makeText(MainActivity.this, R.string.toast_skips_saved, Toast.LENGTH_SHORT).show();
                                         }).show();
                             } else if (which == 1) {
                                 // Edit Alarm
@@ -166,7 +167,7 @@ public class MainActivity extends Activity {
                                 // Delete Alarm
                                 new AlertDialog.Builder(MainActivity.this)
                                         .setTitle(getString(R.string.delete_alarm))
-                                        .setMessage("Are you sure you want to delete this alarm?")
+                                        .setMessage(R.string.delete_alarm_confirm)
                                         .setPositiveButton(getString(R.string.confirm), (d, w) -> deleteAlarmById(item.id))
                                         .setNegativeButton(getString(R.string.cancel), null)
                                         .show();
@@ -183,7 +184,7 @@ public class MainActivity extends Activity {
                         saveAlarms();
                         scheduleAlarmInSystem(item);
                         updateView();
-                        Toast.makeText(MainActivity.this, getString(R.string.save_skips) + " OK", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, R.string.toast_skips_saved, Toast.LENGTH_SHORT).show();
                     }).show();
         });
 
@@ -247,7 +248,7 @@ public class MainActivity extends Activity {
             edit.apply();
             loadNapPresets();
             updateNapButtons();
-            Toast.makeText(this, getString(R.string.save) + " OK", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.toast_save_success, Toast.LENGTH_SHORT).show();
         }).show();
     }
 
@@ -318,7 +319,7 @@ public class MainActivity extends Activity {
             mAlarmListView.setSelection(napIndex);
         }
 
-        Toast.makeText(this, getString(R.string.quick_nap) + ": " + String.format("%02d:%02d", hour, minute), Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, getString(R.string.toast_nap_scheduled, String.format("%02d:%02d", hour, minute)), Toast.LENGTH_SHORT).show();
     }
 
     private final AlarmEditDialog.OnAlarmSavedListener mSavedListener = new AlarmEditDialog.OnAlarmSavedListener() {
@@ -350,7 +351,10 @@ public class MainActivity extends Activity {
             long diff = cal.getTimeInMillis() - System.currentTimeMillis();
             long diffHours = diff / (1000 * 60 * 60);
             long diffMinutes = (diff / (1000 * 60)) % 60;
-            Toast.makeText(MainActivity.this, getString(R.string.alarm_ringing_toast_prefix) + diffHours + "h " + diffMinutes + "m", Toast.LENGTH_SHORT).show();
+            String ringToast = diffHours > 0
+                    ? getString(R.string.toast_alarm_ring_in_hm, diffHours, diffMinutes)
+                    : getString(R.string.toast_alarm_ring_in_m, diffMinutes);
+            Toast.makeText(MainActivity.this, ringToast, Toast.LENGTH_SHORT).show();
         }
 
         @Override
@@ -370,7 +374,7 @@ public class MainActivity extends Activity {
         }
         saveAlarms();
         updateView();
-        Toast.makeText(this, getString(R.string.delete_alarm) + " OK", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.toast_delete_success, Toast.LENGTH_SHORT).show();
     }
 
     private void loadAlarms() {
