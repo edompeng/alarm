@@ -50,7 +50,7 @@ find_platform_jar() {
   if [[ -n "${ANDROID_SDK_ROOT:-}" ]]; then
     sdk_roots+=("${ANDROID_SDK_ROOT}")
   fi
-  sdk_roots+=("${REPO_ROOT}/../android_sdk" "${HOME}/Library/Android/sdk" "/usr/local/lib/android/sdk")
+  sdk_roots+=("${REPO_ROOT}/../android_sdk" "${HOME:-/tmp}/Library/Android/sdk" "/usr/local/lib/android/sdk")
 
   for sdk_root in "${sdk_roots[@]}"; do
     if [[ -f "${sdk_root}/platforms/android-34/android.jar" ]]; then

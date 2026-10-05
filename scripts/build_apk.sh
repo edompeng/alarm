@@ -11,6 +11,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 OUTPUT_PATH=""
 BUILD_MODE="debug"
 
+export HOME="${HOME:-/tmp}"
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --repo-root)
@@ -51,12 +53,12 @@ fi
 if [ -z "${ANDROID_HOME:-}" ]; then
   if [ -n "${ANDROID_SDK_ROOT:-}" ]; then
     ANDROID_HOME="${ANDROID_SDK_ROOT}"
-  elif [ -d "/Users/edom/code/android/android_sdk" ]; then
-    ANDROID_HOME="/Users/edom/code/android/android_sdk"
-  elif [ -d "${HOME}/Library/Android/sdk" ]; then
-    ANDROID_HOME="${HOME}/Library/Android/sdk"
   elif [ -d "/usr/local/lib/android/sdk" ]; then
     ANDROID_HOME="/usr/local/lib/android/sdk"
+  elif [ -d "/Users/edom/code/android/android_sdk" ]; then
+    ANDROID_HOME="/Users/edom/code/android/android_sdk"
+  elif [ -n "${HOME:-}" ] && [ -d "${HOME}/Library/Android/sdk" ]; then
+    ANDROID_HOME="${HOME}/Library/Android/sdk"
   fi
 fi
 
