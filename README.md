@@ -178,16 +178,63 @@ bash scripts/verify_device.sh <device-serial>
 
 ---
 
-## 🚀 GitHub Actions CI / CD
+## 🚀 持续集成与全平台发布 (CI/CD & Releases)
 
-项目在 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 中配置了持续集成流水线：
-- **触发条件**：对 `master`/`main` 分支的 Push 和 PR，以及 Tag 发布。
-- **自动化工作流**：
-  1. 检出代码并配置 Python 3.11、JDK 17、Android SDK 34、Bazelisk 环境。
-  2. 运行 Python 节假日生成器与格式校验。
-  3. 执行 `scripts/test_java.sh` Java 策略单元测试。
-  4. 执行 `bazel test --keep_going //...` C++ 核心单元测试。
-  5. 执行 `bazel build //app:alarm_release_apk` 构建可运行的 Release APK。
-  6. 执行 `apksigner verify` 校验签名及 v1/v2/v3 兼容性。
-  7. 上传 `alarm-release-apk` 构建产物为 GitHub Artifact。
-  8. 推送带版本号 Tag（如 `v1.0.0`）时自动创建 GitHub Release 并附带 release apk 下载。
+项目在 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 中配置了全自动持续集成与多平台发布流水线：
+- **触发条件**：代码推送到 `master`/`main` 分支、发布版本标签（如 `v1.0.0`）或提交 Pull Request。
+- **矩阵与并发流水线**：
+  1. **Android & Linux 构建与验证 Job**（Ubuntu-latest）：
+     - 执行 Python 节假日规则自检与一致性测试；
+     - 执行 Java 框架解耦单元测试；
+     - 执行 Bazel C++ 核心单元测试；
+     - 自动化构建 Android 全架构 Release APK（Universal、ARM64-v8a、ARMv7、x86_64）及 Linux x86_64 原生发行包；
+     - 通过 `apksigner` 执行全量签名校验（v1/v2/v3 签名方案）；
+     - 执行 Linux 原生 CLI 工具冒烟测试；
+     - 归档平台构建产物。
+  2. **macOS 跨平台构建 Job**（macOS-latest Apple Silicon）：
+     - 编译核心业务层并运行 C++ 测试；
+     - 构建 macOS Apple Silicon (`macos-arm64`) 原生发行包与 `alarm-cli` 命令行工具；
+     - 执行 macOS 平台冒烟测试。
+  3. **GitHub Releases 自动化发布 Job**：
+     - 当代码合并至主干或打版本 Tag 时触发；
+     - 自动聚合全平台发行包，生成统一的 `SHA256SUMS.txt` 校验和；
+     - 自动发布或更新至 [GitHub Releases 页面](https://github.com/edompeng/alarm/releases)，挂载全部主流平台安装与运行包。
+
+---
+
+## 📦 主流平台发行包清单 (Release Packages)
+
+发布页面提供以下主流平台二进制文件及校验码：
+
+| 发行包文件名 | 适用平台与架构 | 说明 |
+|---|---|---|
+| `SmartAlarm-v1.0.0-android-universal.apk` | Android 11+ (通用) | 官方推荐，内含完整资源与适配层 |
+| `SmartAlarm-v1.0.0-android-arm64-v8a.apk` | Android 64位 ARM | 针对现代旗舰与主流芯片深度优化 |
+| `SmartAlarm-v1.0.0-android-armeabi-v7a.apk` | Android 32位 ARM | 适配老旧设备与特定嵌入式硬件 |
+| `SmartAlarm-v1.0.0-android-x86_64.apk` | Android x86_64 | 适配 Android 模拟器与 x86 桌面设备 |
+| `SmartAlarm-v1.0.0-linux-x86_64.tar.gz` | Linux x86_64 | 包含 `alarm-cli` 命令行工具、头文件与 2026 日历库 |
+| `SmartAlarm-v1.0.0-macos-arm64.tar.gz` | macOS (Apple Silicon) | 包含 `alarm-cli` 命令行工具、头文件与 2026 日历库 |
+| `SHA256SUMS.txt` | 全平台校验和 | SHA256 安全完整性校验清单 |
+
+---
+
+## 💻 跨平台命令行工具 (alarm-cli)
+
+除了 Android 移动端应用外，项目还提供了独立的跨平台命令行工具 `alarm-cli`，可直接在 Linux / macOS / 终端运行进行日期判别与闹钟计算：
+
+```bash
+# 1. 编译 alarm-cli
+bazel build //cli:alarm_cli
+
+# 2. 判别指定日期是否为法定节假日或调休工作日
+./bazel-bin/cli/alarm_cli check-date 2026-10-01
+
+# 3. 格式化小憩倒计时
+./bazel-bin/cli/alarm_cli countdown 25
+
+# 4. 查询天气铃声声景映射
+./bazel-bin/cli/alarm_cli weather thunderstorm
+
+# 5. 生成防贪睡算术挑战
+./bazel-bin/cli/alarm_cli math-challenge
+```

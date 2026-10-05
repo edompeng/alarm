@@ -9,6 +9,8 @@ bazel-*
 *.apk
 *.aab
 *.keystore
+*.idsig
+dist/
 target/
 build/
 .gradle/

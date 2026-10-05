@@ -1,4 +1,4 @@
-name: CI & Release Build
+name: CI & Multi-Platform Release
 
 on:
   push:
@@ -21,8 +21,8 @@ env:
   JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8
 
 jobs:
-  build-and-test:
-    name: Build, Test & Package Release APK
+  build-android-and-linux:
+    name: Android & Linux (Build, Test & Package)
     runs-on: ubuntu-latest
 
     steps:
@@ -72,25 +72,131 @@ jobs:
         run: |
           bazel test --keep_going //...
 
-      - name: Build Runnable Release APK
+      - name: Package Android & Linux Releases
         run: |
-          bazel build --keep_going //app:alarm_release_apk
-          ls -lh bazel-bin/app/alarm_release_apk.apk
+          bash scripts/package_releases.sh --skip-checksums 1.0.0
 
-      - name: Verify Release APK Signature and Alignment
+      - name: Verify Android APK Signatures
         run: |
-          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose bazel-bin/app/alarm_release_apk.apk
+          for apk in dist/*.apk; do
+            echo "--> Verifying signature of ${apk}..."
+            "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose "${apk}"
+          done
 
-      - name: Upload Release APK Artifact
+      - name: Smoke Test Linux CLI
+        run: |
+          ./bazel-bin/cli/alarm_cli version
+          ./bazel-bin/cli/alarm_cli check-date 2026-10-01
+          ./bazel-bin/cli/alarm_cli countdown 15
+
+      - name: Upload Android & Linux Release Assets
         uses: actions/upload-artifact@v4
         with:
-          name: alarm-release-apk
-          path: bazel-bin/app/alarm_release_apk.apk
+          name: release-assets-linux-android
+          path: |
+            dist/*.apk
+            dist/*.tar.gz
           if-no-files-found: error
 
-      - name: Publish GitHub Release (Tagged Push)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+  build-macos:
+    name: macOS (Build, Test & Package CLI)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Bazelisk
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Run Bazel C++ Unit Tests
+        run: |
+          bazel test --keep_going //tests/...
+
+      - name: Package macOS CLI Release
+        run: |
+          bash scripts/package_releases.sh --cli-only --skip-checksums 1.0.0
+
+      - name: Smoke Test macOS CLI
+        run: |
+          ./bazel-bin/cli/alarm_cli version
+          ./bazel-bin/cli/alarm_cli check-date 2026-10-01
+          ./bazel-bin/cli/alarm_cli countdown 15
+
+      - name: Upload macOS Release Assets
+        uses: actions/upload-artifact@v4
         with:
-          files: bazel-bin/app/alarm_release_apk.apk
-          generate_release_notes: true
+          name: release-assets-macos
+          path: |
+            dist/*.tar.gz
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish Multi-Platform Release
+    needs: [build-android-and-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download All Release Assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-assets-*
+          path: release-dist
+          merge-multiple: true
+
+      - name: Consolidate SHA256 Checksums & Prepare Release Notes
+        run: |
+          cd release-dist
+          rm -f *.idsig SHA256SUMS.txt
+          sha256sum SmartAlarm-v*.apk SmartAlarm-v*.tar.gz > SHA256SUMS.txt
+          echo "=== Consolidated Release Assets ==="
+          ls -lh
+          echo "=== SHA256SUMS.txt ==="
+          cat SHA256SUMS.txt
+
+          RELEASE_TAG="${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.0.0' }}"
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
+
+          cat << 'EOF' > ../release_notes.md
+          ## 🚀 Smart Alarm (智能法定节假日闹钟) 全平台发行版
+
+          Smart Alarm 是一款专为中国法定节假日与复杂唤醒场景设计的高可靠性智能闹钟应用，采用 C++20 跨平台核心业务层 + JNI 桥接 + 原生 Android UI 架构。
+
+          ### 📱 Android 发行包 (Signed APKs)
+          - `SmartAlarm-v1.0.0-android-universal.apk` — **通用安装包** (内置全套资源，推荐多数 Android 11+ 设备直接安装)
+          - `SmartAlarm-v1.0.0-android-arm64-v8a.apk` — **ARM64-v8a 优化包** (面向主流 64 位 ARM 智能手机，性能最优)
+          - `SmartAlarm-v1.0.0-android-armeabi-v7a.apk` — **ARMv7 兼容包** (兼容旧款 32 位 ARM 设备)
+          - `SmartAlarm-v1.0.0-android-x86_64.apk` — **x86_64 架构包** (适配 Android 模拟器与 x86 架构移动设备)
+
+          ### 💻 桌面与原生命令行工具 (Desktop & CLI)
+          - `SmartAlarm-v1.0.0-linux-x86_64.tar.gz` — **Linux x86_64 发行包** (含 `alarm-cli` 原生命令行、2026 法定节假日库与适配头文件)
+          - `SmartAlarm-v1.0.0-macos-arm64.tar.gz` — **macOS Apple Silicon 发行包** (含 `alarm-cli` 原生命令行、2026 法定节假日库与适配头文件)
+
+          ### 🔒 完整性与校验和 (SHA256 Checksums)
+          ```
+          EOF
+          cat SHA256SUMS.txt >> ../release_notes.md
+          echo '```' >> ../release_notes.md
+
+      - name: Publish Release to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Smart Alarm ${{ env.RELEASE_TAG }} Release
+          body_path: release_notes.md
+          target_commitish: ${{ github.sha }}
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: |
+            release-dist/SmartAlarm-v*.apk
+            release-dist/SmartAlarm-v*.tar.gz
+            release-dist/SHA256SUMS.txt
