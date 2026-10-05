@@ -153,6 +153,16 @@ public final class SharedPreferencesAlarmScheduleStore implements AlarmScheduleS
 
     /** Applies the completed-occurrence lifecycle and resets its per-ring snooze counter. */
     void completeRingingOccurrence(long alarmId) {
+        completeRingingOccurrence(alarmId, false);
+    }
+
+    /**
+     * Applies the completed-occurrence lifecycle and resets its per-ring snooze counter.
+     *
+     * @param deleteExpired when true a finished one-time alarm is removed instead of being
+     *                      kept as a disabled record (Quick Naps are always removed).
+     */
+    void completeRingingOccurrence(long alarmId, boolean deleteExpired) {
         synchronized (PREFERENCES_LOCK) {
             AlarmDocument document = readAlarmDocument();
             persistUpgradeIfNeeded(document);
@@ -161,7 +171,7 @@ public final class SharedPreferencesAlarmScheduleStore implements AlarmScheduleS
                 if (alarm.id != alarmId) {
                     continue;
                 }
-                if (alarm.quickNap) {
+                if (alarm.quickNap || (deleteExpired && alarm.repeatMode == 0)) {
                     RemovalResult result = removeAlarm(document.json, alarmId);
                     if (result.removed) {
                         commitJson(ALARMS_KEY, result.alarms);

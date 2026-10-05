@@ -54,6 +54,27 @@ public final class AlarmReconciliationPolicyTest {
                 "repeated reconciliation replaces the same canonical registration");
         AlarmDeliveryTestSupport.assertEquals(1L, second.entries.size(),
                 "report has one entry for every remaining enabled alarm");
+        deletesExpiredAlarmsWhenConfigured();
+    }
+
+    /** With "delete expired alarms" enabled the record is removed after being recorded. */
+    private static void deletesExpiredAlarmsWhenConfigured() {
+        FakeStore store = new FakeStore();
+        store.save(alarm(3L, 0, 900L, "3:1:900"));
+        FakeGateway gateway = new FakeGateway();
+        NextOccurrenceCalculator calculator = (alarm, now, zone) -> 0L;
+        AlarmScheduleReconciler reconciler = new AlarmScheduleReconciler(
+                store, calculator, gateway, () -> 1_000L, () -> ZoneId.of("Asia/Shanghai"),
+                expired -> true);
+
+        ReconcileReport report = reconciler.reconcile(ReconcileReason.APP_LAUNCH);
+
+        AlarmDeliveryTestSupport.assertTrue(report.completed,
+                "reconciliation still completes when expired alarms are deleted");
+        AlarmDeliveryTestSupport.assertTrue(store.findById(3L) == null,
+                "expired one-time alarm is deleted when the setting is enabled");
+        AlarmDeliveryTestSupport.assertEquals(1L, store.outcomes.size(),
+                "missed outcome is recorded before the alarm is deleted");
     }
 
     private static StoredAlarm alarm(long id, int repeatMode, long triggerAt, String occurrenceId) {

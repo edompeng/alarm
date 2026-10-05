@@ -18,6 +18,7 @@ import com.edom.alarm.core.scheduler.AlarmDeliveryModels.MissedState;
 import com.edom.alarm.core.scheduler.AlarmDeliveryModels.ReconcileReason;
 import com.edom.alarm.core.scheduler.AlarmDeliveryModels.ReconcileReport;
 import com.edom.alarm.core.scheduler.AlarmDeliveryModels.StoredAlarm;
+import com.edom.alarm.core.scheduler.ExpiredAlarmPolicy;
 import com.edom.alarm.core.scheduler.AlarmScheduleStore;
 
 import java.util.ArrayList;
@@ -410,18 +411,18 @@ public class MainActivity extends Activity {
             return;
         }
         target.skippedDates = new ArrayList<>(skippedDates);
+        if (!hasFutureRing
+                && (target.isQuickNap || ExpiredAlarmPolicy.shouldDeleteExpired(this))) {
+            // Nothing can ring anymore: honor the "delete expired alarms" policy.
+            cancelAlarmInSystem(target);
+            mAlarms.remove(target);
+            saveAlarms();
+            updateView();
+            Toast.makeText(this, R.string.toast_alarm_deleted_no_dates, Toast.LENGTH_SHORT).show();
+            return;
+        }
         if (!hasFutureRing) {
             target.isEnabled = false;
-            if (target.isQuickNap) {
-                // A Quick Nap with its only occurrence skipped is gone entirely.
-                cancelAlarmInSystem(target);
-                mAlarms.remove(target);
-                saveAlarms();
-                updateView();
-                Toast.makeText(this, R.string.toast_alarm_disabled_no_dates,
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
         }
         saveAlarms();
         scheduleAlarmInSystem(target);

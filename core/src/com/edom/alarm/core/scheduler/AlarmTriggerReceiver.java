@@ -137,8 +137,12 @@ public final class AlarmTriggerReceiver extends BroadcastReceiver {
         AdvanceNotificationManager.cancelAdvanceNotification(application, alarmId);
         application.registrationGateway().cancelAdvanceNotification(alarmId);
         if (alarm.repeatMode == 0) {
-            application.alarmStore().save(alarm.withEnabled(false));
             application.registrationGateway().cancel(alarmId);
+            if (ExpiredAlarmPolicy.shouldDeleteExpired(application)) {
+                application.alarmStore().delete(alarmId);
+            } else {
+                application.alarmStore().save(alarm.withEnabled(false));
+            }
             return;
         }
 

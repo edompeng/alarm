@@ -18,6 +18,8 @@
     <string name="advance_notif_summary">Notify before alarm rings</string>
     <string name="power_button_dismiss">Dismiss with Power Button</string>
     <string name="power_button_dismiss_summary">Pressing the power button on the ringing screen stops the alarm</string>
+    <string name="delete_expired_alarms">Delete Expired Alarms</string>
+    <string name="delete_expired_alarms_summary">Remove a one-time alarm after it rings, and alarms that have no remaining ring date</string>
     <string name="advance_lead_time">Reminder Window</string>
     <string name="minutes_15">15 minutes</string>
     <string name="minutes_30">30 minutes (Default)</string>
@@ -151,6 +153,7 @@
     <string name="toast_sync_url_empty">Sync URL cannot be empty</string>
     <string name="toast_alarm_ring_in">Alarm will ring in %1$s</string>
     <string name="toast_alarm_disabled_no_dates">No ring dates remain; the alarm was switched off</string>
+    <string name="toast_alarm_deleted_no_dates">No ring dates remain; the alarm was removed</string>
     <string name="countdown_to_ring">Next ring in %1$s</string>
     <string name="ring_in_minutes">%1$d min</string>
     <string name="ring_in_hours_minutes">%1$d h %2$d min</string>

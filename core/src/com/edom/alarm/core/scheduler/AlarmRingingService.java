@@ -311,12 +311,13 @@ public final class AlarmRingingService extends Service {
 
     private void completeActiveOccurrence(long alarmId) {
         AlarmApplication application = AlarmApplication.from(this);
+        boolean deleteExpired = ExpiredAlarmPolicy.shouldDeleteExpired(this);
         if (application.alarmStore() instanceof SharedPreferencesAlarmScheduleStore) {
             ((SharedPreferencesAlarmScheduleStore) application.alarmStore())
-                    .completeRingingOccurrence(alarmId);
+                    .completeRingingOccurrence(alarmId, deleteExpired);
         } else {
             StoredAlarm alarm = application.alarmStore().findById(alarmId);
-            if (alarm != null && alarm.quickNap) {
+            if (alarm != null && (alarm.quickNap || (deleteExpired && alarm.repeatMode == 0))) {
                 application.alarmStore().delete(alarmId);
             } else if (alarm != null && alarm.repeatMode == 0) {
                 application.alarmStore().save(alarm.withEnabled(false));

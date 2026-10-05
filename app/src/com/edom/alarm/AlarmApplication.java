@@ -12,6 +12,7 @@ import com.edom.alarm.core.scheduler.AlarmScheduleStore;
 import com.edom.alarm.core.scheduler.AlarmSystemScheduler;
 import com.edom.alarm.core.scheduler.AlarmTriggerReceiver;
 import com.edom.alarm.core.scheduler.DefaultNextOccurrenceCalculator;
+import com.edom.alarm.core.scheduler.ExpiredAlarmPolicy;
 import com.edom.alarm.core.scheduler.NextOccurrenceCalculator;
 import com.edom.alarm.core.scheduler.SharedPreferencesAlarmScheduleStore;
 import com.edom.alarm.ui.HolidaySyncManager;
@@ -40,7 +41,8 @@ public final class AlarmApplication extends Application {
                 nextOccurrenceCalculator,
                 registrationGateway,
                 System::currentTimeMillis,
-                ZoneId::systemDefault);
+                ZoneId::systemDefault,
+                alarm -> ExpiredAlarmPolicy.shouldDeleteExpired(this));
         serviceHandoff = alarm -> startForegroundService(createRingingIntent(alarm));
     }
 

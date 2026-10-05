@@ -11,6 +11,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
@@ -21,6 +22,7 @@ public final class AlarmScheduleReconciler {
     private final AlarmRegistrationGateway registrationGateway;
     private final LongSupplier clock;
     private final Supplier<ZoneId> zoneSupplier;
+    private final Predicate<StoredAlarm> deleteExpiredAlarms;
 
     public AlarmScheduleReconciler(
             AlarmScheduleStore store,
@@ -28,11 +30,26 @@ public final class AlarmScheduleReconciler {
             AlarmRegistrationGateway registrationGateway,
             LongSupplier clock,
             Supplier<ZoneId> zoneSupplier) {
+        this(store, calculator, registrationGateway, clock, zoneSupplier, alarm -> false);
+    }
+
+    /**
+     * @param deleteExpiredAlarms decides whether an alarm that can never ring again is
+     *                             removed instead of being kept in the disabled state.
+     */
+    public AlarmScheduleReconciler(
+            AlarmScheduleStore store,
+            NextOccurrenceCalculator calculator,
+            AlarmRegistrationGateway registrationGateway,
+            LongSupplier clock,
+            Supplier<ZoneId> zoneSupplier,
+            Predicate<StoredAlarm> deleteExpiredAlarms) {
         this.store = Objects.requireNonNull(store);
         this.calculator = Objects.requireNonNull(calculator);
         this.registrationGateway = Objects.requireNonNull(registrationGateway);
         this.clock = Objects.requireNonNull(clock);
         this.zoneSupplier = Objects.requireNonNull(zoneSupplier);
+        this.deleteExpiredAlarms = Objects.requireNonNull(deleteExpiredAlarms);
     }
 
     public ReconcileReport reconcile(ReconcileReason reason) {
@@ -99,6 +116,10 @@ public final class AlarmScheduleReconciler {
             return null;
         }
         if (expiration.action == AlarmDeliveryPolicy.ExpirationAction.DISABLE) {
+            if (deleteExpiredAlarms.test(alarm)) {
+                store.applyMissedTransition(outcome, null, true);
+                return null;
+            }
             StoredAlarm disabled = alarm.withMissedState(expiration.missedState).withEnabled(false);
             store.applyMissedTransition(outcome, disabled, false);
             return disabled;
@@ -107,6 +128,10 @@ public final class AlarmScheduleReconciler {
         long nextTrigger = calculator.calculateNextTriggerAtMs(
                 alarm, Instant.ofEpochMilli(nowMs), zoneSupplier.get());
         if (nextTrigger <= nowMs) {
+            if (deleteExpiredAlarms.test(alarm)) {
+                store.applyMissedTransition(outcome, null, true);
+                return null;
+            }
             // No future occurrence can be computed: disabling the alarm prevents the
             // missed outcome from being re-recorded on every reconcile pass.
             StoredAlarm exhausted =

@@ -35,6 +35,8 @@ public class SettingsDialog extends Dialog {
     public static final String KEY_ADVANCE_MINUTES = "advance_notif_minutes";
     public static final String KEY_POWER_DISMISS = "power_button_dismiss_enabled";
     public static final boolean DEFAULT_POWER_DISMISS = true;
+    public static final String KEY_DELETE_EXPIRED_ALARMS = "delete_expired_alarms_enabled";
+    public static final boolean DEFAULT_DELETE_EXPIRED_ALARMS = true;
 
     public static final String KEY_NAP_SLOT_1_VAL = "nap_slot_1_val";
     public static final String KEY_NAP_SLOT_1_UNIT = "nap_slot_1_unit";
@@ -100,6 +102,11 @@ public class SettingsDialog extends Dialog {
         // Ringing behaviour: allow the power button to stop the current ring
         Switch swPowerDismiss = findViewById(R.id.sw_power_button_dismiss);
         swPowerDismiss.setChecked(prefs.getBoolean(KEY_POWER_DISMISS, DEFAULT_POWER_DISMISS));
+
+        // Alarm lifecycle: delete alarms that can never ring again
+        Switch swDeleteExpired = findViewById(R.id.sw_delete_expired_alarms);
+        swDeleteExpired.setChecked(
+                prefs.getBoolean(KEY_DELETE_EXPIRED_ALARMS, DEFAULT_DELETE_EXPIRED_ALARMS));
 
         RadioGroup rgAdvanceTime = findViewById(R.id.rg_advance_time);
         int advMinutes = prefs.getInt(KEY_ADVANCE_MINUTES, 30);
@@ -260,6 +267,7 @@ public class SettingsDialog extends Dialog {
                     .putBoolean(KEY_ADVANCE_ENABLED, swAdvance.isChecked())
                     .putInt(KEY_ADVANCE_MINUTES, selectedAdvMinutes)
                     .putBoolean(KEY_POWER_DISMISS, swPowerDismiss.isChecked())
+                    .putBoolean(KEY_DELETE_EXPIRED_ALARMS, swDeleteExpired.isChecked())
                     .putInt(KEY_NAP_SLOT_1_VAL, s1)
                     .putString(KEY_NAP_SLOT_1_UNIT, u1)
                     .putInt(KEY_NAP_SLOT_2_VAL, s2)
