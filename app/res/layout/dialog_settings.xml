@@ -347,6 +347,7 @@
                 android:layout_marginBottom="16dp" />
 
             <TextView
+                android:id="@+id/tv_oem_settings_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/oem_settings_title"

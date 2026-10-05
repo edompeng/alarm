@@ -63,6 +63,9 @@
     <string name="sync_failed_msg">Failed to synchronize statutory holidays:\n%1$s\n\nExisting configuration was preserved.</string>
     <string name="oem_settings_title">OriginOS Background Optimization</string>
     <string name="oem_settings_btn">Allow Background High Power &amp; Autostart</string>
+    <string name="oem_settings_samsung_title">Samsung One UI Background Optimization</string>
+    <string name="oem_settings_samsung_btn">Allow Background Activity &amp; Never Sleep</string>
+    <string name="alarm_protection_open_settings_failed">Unable to open system settings page</string>
     <string name="clear_skips">Clear Skips</string>
     <string name="clear_skips_confirm">Clear all skipped dates for this alarm?</string>
     <string name="alarm_ringing">Alarm ringing</string>

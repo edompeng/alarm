@@ -63,6 +63,9 @@
     <string name="sync_failed_msg">法定节假日配置更新失败:\n%1$s\n\n已有本地配置保持不变。</string>
     <string name="oem_settings_title">OriginOS 后台保活设置</string>
     <string name="oem_settings_btn">允许后台高耗电与自启动设置</string>
+    <string name="oem_settings_samsung_title">Samsung One UI 后台保活设置</string>
+    <string name="oem_settings_samsung_btn">允许后台活动与电池无限制 (从不休眠)</string>
+    <string name="alarm_protection_open_settings_failed">无法直接打开系统设置页面</string>
     <string name="clear_skips">清除跳过</string>
     <string name="clear_skips_confirm">确定清除该闹钟的所有跳过日期吗？</string>
     <string name="alarm_ringing">闹钟正在响铃</string>

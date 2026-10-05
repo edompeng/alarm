@@ -12,7 +12,7 @@ import android.widget.Toast;
 
 /**
  * Helper for OEM specific background activity, high power consumption,
- * and autostart whitelist permissions (especially for Vivo / iQOO OriginOS).
+ * and autostart whitelist permissions (especially for Vivo / iQOO OriginOS and Samsung One UI).
  */
 public class OemPermissionHelper {
 
@@ -23,6 +23,15 @@ public class OemPermissionHelper {
         String man = Build.MANUFACTURER != null ? Build.MANUFACTURER.toLowerCase() : "";
         String brand = Build.BRAND != null ? Build.BRAND.toLowerCase() : "";
         return man.contains("vivo") || man.contains("iqoo") || brand.contains("vivo") || brand.contains("iqoo");
+    }
+
+    /**
+     * Checks if current device is manufactured by Samsung (One UI).
+     */
+    public static boolean isSamsung() {
+        String man = Build.MANUFACTURER != null ? Build.MANUFACTURER.toLowerCase() : "";
+        String brand = Build.BRAND != null ? Build.BRAND.toLowerCase() : "";
+        return man.contains("samsung") || brand.contains("samsung");
     }
 
     /**
@@ -45,6 +54,33 @@ public class OemPermissionHelper {
             new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.getPackageName()))
         };
 
+        launchFirstResolvable(context, intents);
+    }
+
+    /**
+     * Attempts to navigate to Samsung One UI Battery Optimization / Never Sleeping Apps settings.
+     * Falls back to standard battery optimization settings or application details.
+     */
+    public static void openSamsungBackgroundSettings(Context context) {
+        Intent[] intents = new Intent[] {
+            // Samsung Device Care / Battery
+            new Intent().setComponent(new ComponentName("com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity")),
+            new Intent().setComponent(new ComponentName("com.samsung.android.sm", "com.samsung.android.sm.battery.ui.BatteryActivity")),
+            new Intent().setComponent(new ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")),
+            new Intent().setComponent(new ComponentName("com.samsung.android.sm", "com.samsung.android.sm.ui.battery.BatteryActivity")),
+            // Samsung Device Care Main Dashboard
+            new Intent().setComponent(new ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.dashboard.DashboardActivity")),
+            new Intent().setComponent(new ComponentName("com.samsung.android.sm", "com.samsung.android.sm.ui.dashboard.DashboardActivity")),
+            // Standard Battery Optimization Settings
+            new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+            // Application Details fallback
+            new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.getPackageName()))
+        };
+
+        launchFirstResolvable(context, intents);
+    }
+
+    private static void launchFirstResolvable(Context context, Intent[] intents) {
         boolean launched = false;
         for (Intent intent : intents) {
             try {

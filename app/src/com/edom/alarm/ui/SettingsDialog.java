@@ -14,6 +14,7 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 import com.edom.alarm.R;
 
@@ -187,12 +188,24 @@ public class SettingsDialog extends Dialog {
             }, mRulesUpdatedListener);
         });
 
-        // 5. OriginOS / Vivo Background Settings Guide
+        // 5. OEM Background Settings Guide (Vivo/iQOO OriginOS or Samsung One UI)
         View layoutOem = findViewById(R.id.layout_oem_settings);
         Button btnOemGuide = findViewById(R.id.btn_oem_whitelist_guide);
+        TextView tvOemTitle = findViewById(R.id.tv_oem_settings_title);
         if (OemPermissionHelper.isVivoOrIqoo()) {
             layoutOem.setVisibility(View.VISIBLE);
+            if (tvOemTitle != null) {
+                tvOemTitle.setText(R.string.oem_settings_title);
+            }
+            btnOemGuide.setText(R.string.oem_settings_btn);
             btnOemGuide.setOnClickListener(v -> OemPermissionHelper.openOriginOsBackgroundSettings(mActivity));
+        } else if (OemPermissionHelper.isSamsung()) {
+            layoutOem.setVisibility(View.VISIBLE);
+            if (tvOemTitle != null) {
+                tvOemTitle.setText(R.string.oem_settings_samsung_title);
+            }
+            btnOemGuide.setText(R.string.oem_settings_samsung_btn);
+            btnOemGuide.setOnClickListener(v -> OemPermissionHelper.openSamsungBackgroundSettings(mActivity));
         } else {
             layoutOem.setVisibility(View.GONE);
         }

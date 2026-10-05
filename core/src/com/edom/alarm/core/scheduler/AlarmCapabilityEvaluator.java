@@ -28,43 +28,90 @@ public final class AlarmCapabilityEvaluator {
     }
 
     public Intent highestImpactSettingsIntent(CapabilitySnapshot capabilities) {
+        // 1. Exact Alarm Settings (API 31+)
         if (!capabilities.exactAlarmAvailable && Build.VERSION.SDK_INT >= 31) {
-            return packageIntent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+            Intent intent = packageIntent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+            if (isIntentResolvable(intent)) {
+                return intent;
+            }
         }
+
+        // 2. Notification Settings (API 33+) - Requires extras, NOT data URI
         if (!capabilities.notificationsAvailable && Build.VERSION.SDK_INT >= 33) {
-            return packageIntent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            Intent notifIntent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            notifIntent.putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+            notifIntent.putExtra("android.provider.extra.APP_PACKAGE", context.getPackageName());
+            notifIntent.putExtra("app_package", context.getPackageName());
+            notifIntent.putExtra("app_uid", context.getApplicationInfo().uid);
+            notifIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (isIntentResolvable(notifIntent)) {
+                return notifIntent;
+            }
         }
+
+        // 3. Full-Screen Intent Settings (API 34+)
         if (!capabilities.fullScreenAvailable && Build.VERSION.SDK_INT >= 34) {
-            return packageIntent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT);
+            Intent fullScreenIntent = packageIntent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT);
+            if (isIntentResolvable(fullScreenIntent)) {
+                return fullScreenIntent;
+            }
         }
-        return packageIntent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+
+        // 4. Application Details Settings fallback
+        Intent appDetailsIntent = packageIntent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        if (isIntentResolvable(appDetailsIntent)) {
+            return appDetailsIntent;
+        }
+
+        // 5. Global Settings fallback
+        return new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    }
+
+    private boolean isIntentResolvable(Intent intent) {
+        try {
+            return context.getPackageManager().resolveActivity(intent, 0) != null;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean canScheduleExactAlarms() {
         if (Build.VERSION.SDK_INT < 31) {
             return true;
         }
-        AlarmManager manager = context.getSystemService(AlarmManager.class);
-        return manager != null && manager.canScheduleExactAlarms();
+        try {
+            AlarmManager manager = context.getSystemService(AlarmManager.class);
+            return manager != null && manager.canScheduleExactAlarms();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean canPostNotifications() {
-        NotificationManager manager = context.getSystemService(NotificationManager.class);
-        boolean enabled = manager != null && manager.areNotificationsEnabled();
-        if (Build.VERSION.SDK_INT < 33) {
-            return enabled;
+        try {
+            NotificationManager manager = context.getSystemService(NotificationManager.class);
+            boolean enabled = manager != null && manager.areNotificationsEnabled();
+            if (Build.VERSION.SDK_INT < 33) {
+                return enabled;
+            }
+            return enabled
+                    && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                            == PackageManager.PERMISSION_GRANTED;
+        } catch (Exception e) {
+            return false;
         }
-        return enabled
-                && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                        == PackageManager.PERMISSION_GRANTED;
     }
 
     private boolean canUseFullScreenIntent() {
         if (Build.VERSION.SDK_INT < 34) {
             return true;
         }
-        NotificationManager manager = context.getSystemService(NotificationManager.class);
-        return manager != null && manager.canUseFullScreenIntent();
+        try {
+            NotificationManager manager = context.getSystemService(NotificationManager.class);
+            return manager != null && manager.canUseFullScreenIntent();
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     private Intent packageIntent(String action) {

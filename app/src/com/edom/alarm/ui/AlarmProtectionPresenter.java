@@ -1,12 +1,17 @@
 package com.edom.alarm.ui;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 import com.edom.alarm.R;
 import com.edom.alarm.core.scheduler.AlarmCapabilityEvaluator;
 import com.edom.alarm.core.scheduler.AlarmDeliveryModels.CapabilitySnapshot;
@@ -22,6 +27,8 @@ import java.util.List;
 
 /** Presents current delivery limitations and independently durable missed outcomes. */
 public final class AlarmProtectionPresenter {
+    public static final int REQUEST_CODE_POST_NOTIFICATIONS = 1001;
+
     private final Activity activity;
     private final View warningContainer;
     private final TextView warningText;
@@ -115,9 +122,41 @@ public final class AlarmProtectionPresenter {
 
     private void openSettingsOnClick(CapabilitySnapshot capabilities) {
         correctiveAction.setOnClickListener(view -> {
+            // On Android 13+, if notifications are not granted, request runtime permission first!
+            if (Build.VERSION.SDK_INT >= 33 && !capabilities.notificationsAvailable) {
+                if (activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    activity.requestPermissions(
+                            new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                            REQUEST_CODE_POST_NOTIFICATIONS);
+                    return;
+                }
+            }
+
+            safeLaunchSettings(capabilities);
+        });
+    }
+
+    public void safeLaunchSettings(CapabilitySnapshot capabilities) {
+        try {
             Intent intent = evaluator.highestImpactSettingsIntent(capabilities);
             activity.startActivity(intent);
-        });
+        } catch (Exception e) {
+            try {
+                Intent fallback = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                fallback.setData(Uri.parse("package:" + activity.getPackageName()));
+                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                activity.startActivity(fallback);
+            } catch (Exception fallbackEx) {
+                try {
+                    Intent systemSettings = new Intent(Settings.ACTION_SETTINGS);
+                    systemSettings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    activity.startActivity(systemSettings);
+                } catch (Exception ex) {
+                    Toast.makeText(activity, R.string.alarm_protection_open_settings_failed, Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
     }
 
     private void showForceStopGuidance() {

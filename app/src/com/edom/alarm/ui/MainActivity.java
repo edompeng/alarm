@@ -207,6 +207,14 @@ public class MainActivity extends Activity {
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == AlarmProtectionPresenter.REQUEST_CODE_POST_NOTIFICATIONS) {
+            reconcileAndPresent();
+        }
+    }
+
     private void setupQuickNapButtons() {
         mBtnNap1.setOnClickListener(v -> triggerQuickNapBySlot(1, mNapSlot1Val, mNapSlot1Unit));
         mBtnNap2.setOnClickListener(v -> triggerQuickNapBySlot(2, mNapSlot2Val, mNapSlot2Unit));
