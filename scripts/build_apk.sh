@@ -12,6 +12,8 @@ OUTPUT_PATH=""
 BUILD_MODE="debug"
 
 export HOME="${HOME:-/tmp}"
+export LC_ALL="C.UTF-8"
+export LANG="C.UTF-8"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -132,7 +134,7 @@ JAVA_FILES=()
 while IFS= read -r -d '' source_file; do
   JAVA_FILES+=("${source_file}")
 done < <(find "${REPO_ROOT}/app/src" "${REPO_ROOT}/core/src" -name "*.java" -print0 | sort -z)
-"${JAVAC_BIN}" -cp "${PLATFORM_JAR}" \
+"${JAVAC_BIN}" -encoding UTF-8 -cp "${PLATFORM_JAR}" \
   -d "${BUILD_TMP}/classes" \
   "${BUILD_TMP}/gen/com/edom/alarm/R.java" \
   "${JAVA_FILES[@]}"

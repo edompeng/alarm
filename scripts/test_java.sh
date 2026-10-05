@@ -101,7 +101,7 @@ mkdir -p "${BUILD_DIR}/classes"
 echo "==> Compiling framework-free Java policy sources"
 echo "    javac: ${JAVAC}"
 echo "    android.jar (compile only): ${PLATFORM_JAR}"
-"${JAVAC}" -source 17 -target 17 -cp "${PLATFORM_JAR}" \
+"${JAVAC}" -source 17 -target 17 -encoding UTF-8 -cp "${PLATFORM_JAR}" \
   -d "${BUILD_DIR}/classes" "${JAVA_SOURCES[@]}"
 
 run_test_class() {
