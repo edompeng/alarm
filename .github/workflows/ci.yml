@@ -36,12 +36,16 @@ jobs:
           distribution: 'temurin'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Ensure Android SDK components
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          ANDROID_ROOT="/usr/local/lib/android/sdk"
+          echo "ANDROID_HOME=${ANDROID_ROOT}" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=${ANDROID_ROOT}" >> $GITHUB_ENV
+          SDKMANAGER=$(find "${ANDROID_ROOT}/cmdline-tools" -type f -name sdkmanager 2>/dev/null | head -n 1)
+          if [ -n "${SDKMANAGER}" ] && [ -x "${SDKMANAGER}" ]; then
+            echo "Using sdkmanager: ${SDKMANAGER}"
+            yes | "${SDKMANAGER}" --licenses > /dev/null 2>&1 || true
+            "${SDKMANAGER}" "platforms;android-34" "build-tools;34.0.0"
+          fi
 
       - name: Set up Bazelisk
         uses: bazelbuild/setup-bazelisk@v3
