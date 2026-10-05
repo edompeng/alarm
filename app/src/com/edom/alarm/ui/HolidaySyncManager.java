@@ -29,7 +29,8 @@ import java.util.concurrent.Executors;
 public class HolidaySyncManager {
 
     public static final String PREFS_NAME = "smart_alarm_prefs";
-    public static final String DEFAULT_SYNC_URL = "https://raw.githubusercontent.com/edom/alarm/main/core/src/assets/holidays_2026.json";
+    public static final String DEFAULT_SYNC_URL = "https://raw.githubusercontent.com/edompeng/alarm/master/core/src/assets/holidays_2026.json";
+    public static final String LEGACY_SYNC_URL = "https://raw.githubusercontent.com/edom/alarm/main/core/src/assets/holidays_2026.json";
 
     public static final String KEY_HOLIDAY_SYNC_URL = "holiday_sync_url";
     public static final String KEY_LAST_SYNC_TIME = "last_holiday_sync_timestamp";
@@ -141,9 +142,14 @@ public class HolidaySyncManager {
         }
 
         String syncUrl = prefs.getString(KEY_HOLIDAY_SYNC_URL, DEFAULT_SYNC_URL);
+        if (LEGACY_SYNC_URL.equals(syncUrl)) {
+            syncUrl = DEFAULT_SYNC_URL;
+            prefs.edit().putString(KEY_HOLIDAY_SYNC_URL, DEFAULT_SYNC_URL).apply();
+        }
+        final String effectiveSyncUrl = syncUrl;
         EXECUTOR.execute(() -> {
             try {
-                SyncResult result = executeFetchAndParse(syncUrl);
+                SyncResult result = executeFetchAndParse(effectiveSyncUrl);
                 persistSyncResult(appContext, result);
                 prefs.edit()
                         .putLong(KEY_LAST_SYNC_TIME, System.currentTimeMillis())

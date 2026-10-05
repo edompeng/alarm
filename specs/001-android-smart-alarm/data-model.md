@@ -191,7 +191,7 @@ Global user preferences stored persistently in `app_configurations` (or `SharedP
 | `nap_slot_3_unit` | String | `"MINUTES"` | `"MINUTES"`, `"HOURS"` | Quick Nap slot 3 duration unit |
 | `nap_slot_4_val` | Integer | `60` | $\ge 1$ | Quick Nap slot 4 numerical duration |
 | `nap_slot_4_unit` | String | `"MINUTES"` | `"MINUTES"`, `"HOURS"` | Quick Nap slot 4 duration unit |
-| `holiday_sync_url` | String | `"https://raw.githubusercontent.com/edom/alarm/main/core/src/assets/holidays_2026.json"` | Valid HTTP/HTTPS URL | Remote statutory holiday JSON endpoint |
+| `holiday_sync_url` | String | `"https://raw.githubusercontent.com/edompeng/alarm/master/core/src/assets/holidays_2026.json"` | Valid HTTP/HTTPS URL | Remote statutory holiday JSON endpoint |
 | `last_holiday_sync_timestamp` | Long | `0` | Epoch milliseconds | Timestamp of last sync attempt |
 | `last_holiday_sync_status` | Boolean | `false` | `true`, `false` | Status outcome of last sync attempt |
 | `oem_whitelist_guided` | Boolean | `false` | `true`, `false` | Whether Vivo/iQOO OriginOS guidance was displayed |

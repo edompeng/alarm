@@ -14,7 +14,22 @@ genrule(
         "//core:android_java_sources",
     ],
     outs = ["alarm_debug_apk.apk"],
-    cmd = "$(location //scripts:build_apk.sh) --repo-root $$PWD --output $@",
+    cmd = "$(location //scripts:build_apk.sh) --repo-root $$PWD --mode debug --output $@",
+    tags = ["no-sandbox"],
+    tools = ["//scripts:build_apk.sh"],
+)
+
+genrule(
+    name = "alarm_release_apk",
+    srcs = glob([
+        "res/**/*",
+        "src/**/*.java",
+    ]) + [
+        "AndroidManifest.xml",
+        "//core:android_java_sources",
+    ],
+    outs = ["alarm_release_apk.apk"],
+    cmd = "$(location //scripts:build_apk.sh) --repo-root $$PWD --mode release --output $@",
     tags = ["no-sandbox"],
     tools = ["//scripts:build_apk.sh"],
 )

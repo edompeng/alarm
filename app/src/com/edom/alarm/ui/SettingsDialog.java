@@ -145,6 +145,10 @@ public class SettingsDialog extends Dialog {
         Button btnSyncHolidaysNow = findViewById(R.id.btn_sync_holidays_now);
 
         String savedSyncUrl = prefs.getString(HolidaySyncManager.KEY_HOLIDAY_SYNC_URL, HolidaySyncManager.DEFAULT_SYNC_URL);
+        if (HolidaySyncManager.LEGACY_SYNC_URL.equals(savedSyncUrl)) {
+            savedSyncUrl = HolidaySyncManager.DEFAULT_SYNC_URL;
+            prefs.edit().putString(HolidaySyncManager.KEY_HOLIDAY_SYNC_URL, HolidaySyncManager.DEFAULT_SYNC_URL).apply();
+        }
         etHolidaySyncUrl.setText(savedSyncUrl);
 
         btnResetSyncUrl.setOnClickListener(v -> etHolidaySyncUrl.setText(HolidaySyncManager.DEFAULT_SYNC_URL));

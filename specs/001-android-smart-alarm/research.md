@@ -396,7 +396,7 @@ Official references: [ApplicationInfo.FLAG_STOPPED](https://developer.android.co
 ### Decision
 1. **Configurable Endpoint in Settings**:
    - Provide an editable URL text field in `SettingsDialog` pre-filled with a default CDN / GitHub Raw URL hosting official holiday JSON:
-     `https://raw.githubusercontent.com/edom/alarm/main/core/src/assets/holidays_2026.json` (or customizable by user).
+     `https://raw.githubusercontent.com/edompeng/alarm/master/core/src/assets/holidays_2026.json` (or customizable by user).
    - Provide a "Reset to Default" button and a "Sync Now / 立即同步" action button.
 2. **Manual Sync Workflow**:
    - Tapping "Sync Now" triggers asynchronous HTTP GET using Android standard `HttpURLConnection`.

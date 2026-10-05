@@ -1,5 +1,6 @@
 #include <cstdio>
 
+#include "core/src/holiday/holiday_cloud_sync_service.h"
 #include "core/src/holiday/holiday_engine_impl.h"
 #include "data/src/db/alarm_database_helper.h"
 #include "data/src/repository/holiday_repository_impl.h"
@@ -94,8 +95,42 @@ bool TestBaselineJsonParsing() {
     return true;
 }
 
+bool TestHolidayCloudSyncService() {
+    std::remove(kTestDbPath);
+    AlarmDatabaseHelper db_helper(kTestDbPath);
+    EXPECT_TRUE(db_helper.Open());
+    HolidayRepositoryImpl repo(&db_helper);
+    HolidayEngineImpl engine(&repo);
+    HolidayCloudSyncService sync_service(&engine);
+
+    // Empty payload handling
+    EXPECT_FALSE(sync_service.ProcessRemotePayload(""));
+    HolidayCloudSyncService null_sync_service(nullptr);
+    EXPECT_FALSE(null_sync_service.ProcessRemotePayload("{}"));
+    EXPECT_FALSE(null_sync_service.EnsureYearCoverage(2026, "{}"));
+
+    // Valid remote payload processing
+    const std::string payload = R"({
+        "rules": [
+            {"date": "2026-10-01", "type": 2, "name": "国庆节"},
+            {"date": "2026-10-10", "type": 3, "name": "国庆补班"}
+        ]
+    })";
+    EXPECT_TRUE(sync_service.ProcessRemotePayload(payload));
+    EXPECT_FALSE(engine.IsStatutoryWorkday("2026-10-01"));
+    EXPECT_TRUE(engine.IsStatutoryWorkday("2026-10-10"));
+
+    // Fallback coverage
+    EXPECT_TRUE(sync_service.EnsureYearCoverage(2026, payload));
+
+    db_helper.Close();
+    std::remove(kTestDbPath);
+    return true;
+}
+
 TEST_MAIN_BEGIN
 RUN_TEST(TestDayOfWeekCalculation);
 RUN_TEST(TestHolidayEngineClassificationAndWorkday);
 RUN_TEST(TestBaselineJsonParsing);
+RUN_TEST(TestHolidayCloudSyncService);
 TEST_MAIN_END
