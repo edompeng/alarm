@@ -5,8 +5,11 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
@@ -22,8 +25,9 @@ import com.edom.alarm.AlarmApplication;
 import com.edom.alarm.R;
 import com.edom.alarm.core.scheduler.AlarmDeliveryModels.Registration;
 import com.edom.alarm.core.scheduler.AlarmDeliveryModels.StoredAlarm;
-import com.edom.alarm.ui.RingingActivity;
 import com.edom.alarm.ui.LocalizationManager;
+import com.edom.alarm.ui.RingingActivity;
+import com.edom.alarm.ui.SettingsDialog;
 
 /** Owns bounded ringing resources for one claimed occurrence. */
 public final class AlarmRingingService extends Service {
@@ -39,11 +43,13 @@ public final class AlarmRingingService extends Service {
     private static final String CHANNEL_ID = "channel_smart_alarm_high_priority";
     private static final String TAG = "SmartAlarm:Ringing";
     private static final long SAFETY_TIMEOUT_MS = 10L * 60L * 1000L;
+    private static final long RINGING_SCREEN_GRACE_MS = 5_000L;
     private static final long[] VIBRATION_PATTERN = {0L, 500L, 500L};
 
     private PowerManager.WakeLock wakeLock;
     private MediaPlayer mediaPlayer;
     private Vibrator vibrator;
+    private BroadcastReceiver powerButtonReceiver;
     private final android.os.Handler mainHandler = new android.os.Handler();
     private Runnable timeoutAction;
     private long activeAlarmId = -1L;
@@ -122,6 +128,7 @@ public final class AlarmRingingService extends Service {
             return START_NOT_STICKY;
         }
         acquireWakeLock();
+        registerPowerButtonDismiss();
         startAudio(intent.getStringExtra(EXTRA_RINGTONE_URI));
         if (intent.getBooleanExtra(EXTRA_VIBRATE_ENABLED, true)) {
             startVibration();
@@ -363,6 +370,7 @@ public final class AlarmRingingService extends Service {
     }
 
     private void releaseResources() {
+        unregisterPowerButtonDismiss();
         if (timeoutAction != null) {
             mainHandler.removeCallbacks(timeoutAction);
             timeoutAction = null;
@@ -389,5 +397,60 @@ public final class AlarmRingingService extends Service {
         activeAlarmId = -1L;
         activeOccurrenceId = "";
         activeSessionToken++;
+    }
+
+    /**
+     * Dismissing with the power button is observed through ACTION_SCREEN_OFF: the
+     * platform consumes KEYCODE_POWER before it reaches application windows, so the
+     * screen-off broadcast is the only reliable signal available to a normal app.
+     */
+    private void registerPowerButtonDismiss() {
+        SharedPreferences preferences = getSharedPreferences(
+                SharedPreferencesAlarmScheduleStore.PREFERENCES_NAME, Context.MODE_PRIVATE);
+        if (!preferences.getBoolean(
+                SettingsDialog.KEY_POWER_DISMISS, SettingsDialog.DEFAULT_POWER_DISMISS)) {
+            return;
+        }
+        if (powerButtonReceiver != null) {
+            return;
+        }
+        powerButtonReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (!Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+                    return;
+                }
+                long alarmId = activeAlarmId;
+                if (alarmId < 0L) {
+                    return;
+                }
+                if (!RingingActivity.isOnScreenOrRecentlyShown(RINGING_SCREEN_GRACE_MS)) {
+                    // The ringing screen was not on top (for example the display just
+                    // timed out); keep ringing instead of dismissing silently.
+                    Log.i(TAG, "Ignoring screen-off without a visible ringing screen");
+                    return;
+                }
+                Log.i(TAG, "Power button pressed; dismissing alarm " + alarmId);
+                completeActiveOccurrence(alarmId);
+                stopSelf();
+            }
+        };
+        IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(powerButtonReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(powerButtonReceiver, filter);
+        }
+    }
+
+    private void unregisterPowerButtonDismiss() {
+        if (powerButtonReceiver != null) {
+            try {
+                unregisterReceiver(powerButtonReceiver);
+            } catch (IllegalArgumentException ignored) {
+                // Already unregistered by the framework.
+            }
+            powerButtonReceiver = null;
+        }
     }
 }

@@ -20,6 +20,22 @@ public final class RingingActivity extends Activity {
     private long alarmId;
     private String occurrenceId;
 
+    private static volatile boolean sVisible;
+    private static volatile long sHiddenAtMs;
+
+    /**
+     * True while this screen is on top, or was on top within {@code windowMs}. The
+     * ringing service uses this to tell a real power-button press apart from an
+     * unrelated display timeout before dismissing the alarm.
+     */
+    public static boolean isOnScreenOrRecentlyShown(long windowMs) {
+        if (sVisible) {
+            return true;
+        }
+        long hiddenAt = sHiddenAtMs;
+        return hiddenAt > 0L && System.currentTimeMillis() - hiddenAt <= windowMs;
+    }
+
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(LocalizationManager.wrapContext(base));
@@ -62,6 +78,19 @@ public final class RingingActivity extends Activity {
             return;
         }
         renderAlarmDetails();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        sVisible = true;
+    }
+
+    @Override
+    protected void onPause() {
+        sVisible = false;
+        sHiddenAtMs = System.currentTimeMillis();
+        super.onPause();
     }
 
     @Override

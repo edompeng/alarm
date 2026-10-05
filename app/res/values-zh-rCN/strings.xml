@@ -16,6 +16,8 @@
     <string name="language_en">English</string>
     <string name="advance_notification">提前提醒通知</string>
     <string name="advance_notif_summary">响铃前在通知栏发送提醒</string>
+    <string name="power_button_dismiss">按电源键关闭响铃</string>
+    <string name="power_button_dismiss_summary">响铃界面按电源键（熄屏）即关闭本次响铃</string>
     <string name="advance_lead_time">提前提醒时间</string>
     <string name="minutes_15">15分钟</string>
     <string name="minutes_30">30分钟 (默认)</string>

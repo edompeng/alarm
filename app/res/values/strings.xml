@@ -16,6 +16,8 @@
     <string name="language_en">English</string>
     <string name="advance_notification">Advance Notification</string>
     <string name="advance_notif_summary">Notify before alarm rings</string>
+    <string name="power_button_dismiss">Dismiss with Power Button</string>
+    <string name="power_button_dismiss_summary">Pressing the power button on the ringing screen stops the alarm</string>
     <string name="advance_lead_time">Reminder Window</string>
     <string name="minutes_15">15 minutes</string>
     <string name="minutes_30">30 minutes (Default)</string>

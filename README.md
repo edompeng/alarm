@@ -19,6 +19,7 @@ Smart Alarm 是一款专为中国法定节假日与复杂唤醒场景设计的�
 2. **🔔 极致保活与精准响铃 (High-Reliability Alarm Delivery)**
    - 基于 `AlarmManager.setExactAndAllowWhileIdle()` 精确唤醒。
    - 锁屏高优先级拉起：结合 `turnScreenOn` 与 `showWhenLocked`，穿透锁屏全屏提醒。
+   - 响铃控制：音量键稍后提醒；可在设置中开启“按电源键关闭响铃”。
    - OEM 厂商保活引导：针对 Vivo/iQOO OriginOS、Samsung One UI 等定制系统提供后台自启动及电池优化设置指引。
 
 3. **🧮 防贪睡趣味挑战 (Anti-Snooze Challenges)**
