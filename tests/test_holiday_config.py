@@ -66,6 +66,26 @@ class TestHolidayConfig(unittest.TestCase):
             "HolidaySyncManager must point to official repo default URL",
         )
 
+    def test_national_day_2026_arrangement_matches_both_sources(self):
+        """2026-10-06 is a holiday and 2026-10-08 stays a workday for statutory alarms."""
+        baseline_path = os.path.join(
+            REPO_ROOT, "app", "res", "raw", "statutory_holidays_baseline.json"
+        )
+        with open(baseline_path, "r", encoding="utf-8") as f:
+            baseline = json.load(f)
+        rules = {rule["date"]: rule["type"] for rule in baseline["rules"]}
+        self.assertEqual(2, rules.get("2026-10-06"), "2026-10-06 must be a statutory holiday")
+        self.assertEqual(3, rules.get("2026-10-10"), "2026-10-10 must be a make-up workday")
+        self.assertNotIn("2026-10-08", rules, "2026-10-08 must stay a regular workday")
+
+        asset_path = os.path.join(REPO_ROOT, "core", "src", "assets", "holidays_2026.json")
+        with open(asset_path, "r", encoding="utf-8") as f:
+            asset = json.load(f)
+        self.assertIn("2026-10-06", asset["holidays"])
+        self.assertIn("2026-10-10", asset["workdays"])
+        self.assertNotIn("2026-10-08", asset["holidays"])
+        self.assertNotIn("2026-10-08", asset["workdays"])
+
 
 if __name__ == "__main__":
     unittest.main()

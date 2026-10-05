@@ -5,6 +5,8 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
@@ -42,6 +44,18 @@ public class MainActivity extends Activity {
     private AlarmApplication mApplication;
     private AlarmScheduleStore mAlarmStore;
     private AlarmProtectionPresenter mProtectionPresenter;
+
+    private static final long COUNTDOWN_REFRESH_INTERVAL_MS = 30_000L;
+    private final Handler mCountdownHandler = new Handler(Looper.getMainLooper());
+    private final Runnable mCountdownRefresh = new Runnable() {
+        @Override
+        public void run() {
+            if (mAdapter != null) {
+                mAdapter.notifyDataSetChanged();
+            }
+            mCountdownHandler.postDelayed(this, COUNTDOWN_REFRESH_INTERVAL_MS);
+        }
+    };
 
     private Button mBtnNap1;
     private Button mBtnNap2;
@@ -157,14 +171,9 @@ public class MainActivity extends Activity {
                         .setItems(options, (dialog, which) -> {
                             if (which == 0) {
                                 // Vacation Mode
-                                new VacationCalendarDialog(MainActivity.this, item.id, item.skippedDates,
-                                        (alarmId, skippedDates) -> {
-                                            item.skippedDates = new ArrayList<>(skippedDates);
-                                            saveAlarms();
-                                            scheduleAlarmInSystem(item);
-                                            updateView();
-                                            Toast.makeText(MainActivity.this, R.string.toast_skips_saved, Toast.LENGTH_SHORT).show();
-                                        }).show();
+                                new VacationCalendarDialog(
+                                        MainActivity.this, item, MainActivity.this::applyVacationResult)
+                                        .show();
                             } else if (which == 1) {
                                 // Edit Alarm
                                 new AlarmEditDialog(MainActivity.this, item, mSavedListener).show();
@@ -183,14 +192,8 @@ public class MainActivity extends Activity {
         });
 
         mAdapter.setOnVacationBadgeClickListener(item -> {
-            new VacationCalendarDialog(MainActivity.this, item.id, item.skippedDates,
-                    (alarmId, skippedDates) -> {
-                        item.skippedDates = new ArrayList<>(skippedDates);
-                        saveAlarms();
-                        scheduleAlarmInSystem(item);
-                        updateView();
-                        Toast.makeText(MainActivity.this, R.string.toast_skips_saved, Toast.LENGTH_SHORT).show();
-                    }).show();
+            new VacationCalendarDialog(
+                    MainActivity.this, item, MainActivity.this::applyVacationResult).show();
         });
 
         mAlarmListView.setAdapter(mAdapter);
@@ -211,6 +214,14 @@ public class MainActivity extends Activity {
         if (mApplication != null && mProtectionPresenter != null) {
             reconcileAndPresent();
         }
+        mCountdownHandler.removeCallbacks(mCountdownRefresh);
+        mCountdownHandler.post(mCountdownRefresh);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mCountdownHandler.removeCallbacks(mCountdownRefresh);
     }
 
     @Override
@@ -346,20 +357,20 @@ public class MainActivity extends Activity {
             scheduleAlarmInSystem(item);
             updateView();
 
-            Calendar cal = Calendar.getInstance();
-            cal.set(Calendar.HOUR_OF_DAY, item.hour);
-            cal.set(Calendar.MINUTE, item.minute);
-            cal.set(Calendar.SECOND, 0);
-            if (cal.getTimeInMillis() <= System.currentTimeMillis()) {
-                cal.add(Calendar.DAY_OF_MONTH, 1);
+            // Report the schedule that was actually persisted (holidays, repeat mode,
+            // and skip dates included) instead of a hand-rolled next-day estimate.
+            StoredAlarm persisted = mAlarmStore.findById(item.id);
+            long triggerAtMs = persisted != null ? persisted.nextTriggerAtMs : 0L;
+            long nowMs = System.currentTimeMillis();
+            if (persisted != null && persisted.enabled && triggerAtMs > nowMs) {
+                Toast.makeText(MainActivity.this,
+                        getString(R.string.toast_alarm_ring_in,
+                                RingCountdownFormatter.format(MainActivity.this, triggerAtMs - nowMs)),
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(MainActivity.this, R.string.toast_save_success, Toast.LENGTH_SHORT)
+                        .show();
             }
-            long diff = cal.getTimeInMillis() - System.currentTimeMillis();
-            long diffHours = diff / (1000 * 60 * 60);
-            long diffMinutes = (diff / (1000 * 60)) % 60;
-            String ringToast = diffHours > 0
-                    ? getString(R.string.toast_alarm_ring_in_hm, diffHours, diffMinutes)
-                    : getString(R.string.toast_alarm_ring_in_m, diffMinutes);
-            Toast.makeText(MainActivity.this, ringToast, Toast.LENGTH_SHORT).show();
         }
 
         @Override
@@ -380,6 +391,44 @@ public class MainActivity extends Activity {
         saveAlarms();
         updateView();
         Toast.makeText(this, R.string.toast_delete_success, Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Applies the vacation calendar result. When every remaining occurrence is
+     * skipped the alarm can never ring again, so its switch is turned off.
+     */
+    private void applyVacationResult(
+            long alarmId, List<String> skippedDates, boolean hasFutureRing) {
+        AlarmListAdapter.AlarmItemModel target = null;
+        for (AlarmListAdapter.AlarmItemModel candidate : mAlarms) {
+            if (candidate.id == alarmId) {
+                target = candidate;
+                break;
+            }
+        }
+        if (target == null) {
+            return;
+        }
+        target.skippedDates = new ArrayList<>(skippedDates);
+        if (!hasFutureRing) {
+            target.isEnabled = false;
+            if (target.isQuickNap) {
+                // A Quick Nap with its only occurrence skipped is gone entirely.
+                cancelAlarmInSystem(target);
+                mAlarms.remove(target);
+                saveAlarms();
+                updateView();
+                Toast.makeText(this, R.string.toast_alarm_disabled_no_dates,
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        saveAlarms();
+        scheduleAlarmInSystem(target);
+        updateView();
+        Toast.makeText(this,
+                hasFutureRing ? R.string.toast_skips_saved : R.string.toast_alarm_disabled_no_dates,
+                Toast.LENGTH_SHORT).show();
     }
 
     private void loadAlarms() {
@@ -444,10 +493,12 @@ public class MainActivity extends Activity {
     }
 
     private AlarmListAdapter.AlarmItemModel toViewModel(StoredAlarm alarm) {
-        return new AlarmListAdapter.AlarmItemModel(
+        AlarmListAdapter.AlarmItemModel item = new AlarmListAdapter.AlarmItemModel(
                 alarm.id, alarm.hour, alarm.minute, alarm.enabled, alarm.repeatMode,
                 alarm.daysBitmask, alarm.label, alarm.quickNap, alarm.ringtoneUri,
                 alarm.ringtoneTitle, alarm.vibrateEnabled, new ArrayList<>(alarm.skippedDates));
+        item.nextTriggerAtMs = alarm.nextTriggerAtMs;
+        return item;
     }
 
     private StoredAlarm toStoredAlarm(

@@ -36,7 +36,7 @@
     <string name="empty_alarms">暂无闹钟\n点击下方\"+ 添加闹钟\"创建</string>
     <string name="edit_alarm">编辑闹钟</string>
     <string name="delete_alarm">删除闹钟</string>
-    <string name="select_dates_to_skip">选择跳过响铃日期:</string>
+    <string name="select_dates_to_skip">点击橙色日期可取消该天响铃：</string>
     <string name="save_skips">保存跳过日期</string>
     <string name="confirm">确定</string>
     <string name="upcoming_alarm">即将响铃</string>
@@ -147,8 +147,12 @@
     <string name="toast_alarm_enabled">%1$s 闹钟已开启</string>
     <string name="toast_alarm_disabled">%1$s 闹钟已关闭</string>
     <string name="toast_sync_url_empty">节假日配置订阅源地址不能为空</string>
-    <string name="toast_alarm_ring_in_hm">闹钟将在 %1$d 小时 %2$d 分钟后响铃</string>
-    <string name="toast_alarm_ring_in_m">闹钟将在 %1$d 分钟后响铃</string>
+    <string name="toast_alarm_ring_in">闹钟将在 %1$s 后响铃</string>
+    <string name="toast_alarm_disabled_no_dates">已无可响铃日期，闹钟已关闭</string>
+    <string name="countdown_to_ring">距离下次响铃 %1$s</string>
+    <string name="ring_in_minutes">%1$d 分钟</string>
+    <string name="ring_in_hours_minutes">%1$d 小时 %2$d 分钟</string>
+    <string name="ring_in_days_hours_minutes">%1$d 天 %2$d 小时 %3$d 分钟</string>
     <string name="app_version_default">1.0.0</string>
     <string name="about_version">版本 v%1$s</string>
 </resources>

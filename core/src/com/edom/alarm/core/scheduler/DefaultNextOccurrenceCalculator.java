@@ -33,7 +33,11 @@ public final class DefaultNextOccurrenceCalculator implements NextOccurrenceCalc
         ZonedDateTime zonedNow = now.atZone(zoneId);
         LocalDate startDate = zonedNow.toLocalDate();
         LocalTime alarmTime = LocalTime.of(alarm.hour, alarm.minute);
-        for (int offset = 0; offset <= MAX_SEARCH_DAYS; offset++) {
+        // A "Ring Once" alarm has a single occurrence: today when the time is still
+        // ahead, otherwise tomorrow. Skipping that occurrence must not roll the
+        // one-shot alarm over to another day.
+        int lastOffset = alarm.repeatMode == 0 ? 1 : MAX_SEARCH_DAYS;
+        for (int offset = 0; offset <= lastOffset; offset++) {
             LocalDate candidateDate = startDate.plusDays(offset);
             if (!matchesRecurrence(alarm, candidateDate)
                     || alarm.skippedDates.contains(candidateDate.toString())) {

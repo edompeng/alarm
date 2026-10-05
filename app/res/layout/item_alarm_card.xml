@@ -89,6 +89,17 @@
                 android:textStyle="bold"
                 android:visibility="gone" />
         </LinearLayout>
+
+        <!-- Countdown Until The Next Ring -->
+        <TextView
+            android:id="@+id/tv_alarm_countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:visibility="gone" />
     </LinearLayout>
 
     <!-- Right: Instant On/Off Toggle Switch -->

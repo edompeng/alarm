@@ -129,7 +129,7 @@
     <GridView
         android:id="@+id/gv_calendar_days"
         android:layout_width="match_parent"
-        android:layout_height="140dp"
+        android:layout_height="230dp"
         android:numColumns="7"
         android:stretchMode="columnWidth"
         android:gravity="center" />

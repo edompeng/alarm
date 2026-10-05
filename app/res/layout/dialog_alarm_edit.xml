@@ -96,72 +96,100 @@
                 <ToggleButton
                     android:id="@+id/tb_mon"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp"
                     android:textOn="@string/day_mon_short"
                     android:textOff="@string/day_mon_short"
                     android:text="@string/day_mon_short"
-                    android:textSize="12sp" />
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <ToggleButton
                     android:id="@+id/tb_tue"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp"
                     android:textOn="@string/day_tue_short"
                     android:textOff="@string/day_tue_short"
                     android:text="@string/day_tue_short"
-                    android:textSize="12sp" />
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <ToggleButton
                     android:id="@+id/tb_wed"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp"
                     android:textOn="@string/day_wed_short"
                     android:textOff="@string/day_wed_short"
                     android:text="@string/day_wed_short"
-                    android:textSize="12sp" />
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <ToggleButton
                     android:id="@+id/tb_thu"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp"
                     android:textOn="@string/day_thu_short"
                     android:textOff="@string/day_thu_short"
                     android:text="@string/day_thu_short"
-                    android:textSize="12sp" />
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <ToggleButton
                     android:id="@+id/tb_fri"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp"
                     android:textOn="@string/day_fri_short"
                     android:textOff="@string/day_fri_short"
                     android:text="@string/day_fri_short"
-                    android:textSize="12sp" />
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <ToggleButton
                     android:id="@+id/tb_sat"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp"
                     android:textOn="@string/day_sat_short"
                     android:textOff="@string/day_sat_short"
                     android:text="@string/day_sat_short"
-                    android:textSize="12sp" />
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <ToggleButton
                     android:id="@+id/tb_sun"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp"
                     android:textOn="@string/day_sun_short"
                     android:textOff="@string/day_sun_short"
                     android:text="@string/day_sun_short"
-                    android:textSize="12sp" />
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <!-- Ringtone / Sound Picker Row -->

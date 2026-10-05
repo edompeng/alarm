@@ -27,6 +27,8 @@ public class AlarmListAdapter extends BaseAdapter {
         public String ringtoneTitle;
         public boolean vibrateEnabled;
         public List<String> skippedDates;
+        /** Durable next trigger; 0 when the alarm has no scheduled occurrence. */
+        public long nextTriggerAtMs;
 
         public AlarmItemModel(long id, int hour, int minute, boolean isEnabled,
                               int repeatMode, int daysBitmask, String label) {
@@ -121,6 +123,7 @@ public class AlarmListAdapter extends BaseAdapter {
             holder.tvRepeat = convertView.findViewById(R.id.tv_alarm_repeat);
             holder.tvVacation = convertView.findViewById(R.id.tv_alarm_vacation);
             holder.tvNapBadge = convertView.findViewById(R.id.tv_alarm_nap_badge);
+            holder.tvCountdown = convertView.findViewById(R.id.tv_alarm_countdown);
             holder.swEnabled = convertView.findViewById(R.id.sw_alarm_enabled);
             convertView.setTag(holder);
         } else {
@@ -162,6 +165,16 @@ public class AlarmListAdapter extends BaseAdapter {
             holder.tvNapBadge.setText(mContext.getString(R.string.quick_nap));
         } else {
             holder.tvNapBadge.setVisibility(View.GONE);
+        }
+
+        long nowMs = System.currentTimeMillis();
+        if (item.isEnabled && item.nextTriggerAtMs > nowMs) {
+            holder.tvCountdown.setVisibility(View.VISIBLE);
+            holder.tvCountdown.setText(mContext.getString(
+                    R.string.countdown_to_ring,
+                    RingCountdownFormatter.format(mContext, item.nextTriggerAtMs - nowMs)));
+        } else {
+            holder.tvCountdown.setVisibility(View.GONE);
         }
 
         // Avoid triggering listener during view recycling
@@ -220,6 +233,7 @@ public class AlarmListAdapter extends BaseAdapter {
         TextView tvRepeat;
         TextView tvVacation;
         TextView tvNapBadge;
+        TextView tvCountdown;
         Switch swEnabled;
     }
 }

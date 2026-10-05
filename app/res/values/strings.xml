@@ -36,7 +36,7 @@
     <string name="empty_alarms">No alarms configured.\nTap \'+ Add Alarm\' to set one.</string>
     <string name="edit_alarm">Edit Alarm</string>
     <string name="delete_alarm">Delete Alarm</string>
-    <string name="select_dates_to_skip">Select dates to skip alarm:</string>
+    <string name="select_dates_to_skip">Tap a highlighted date to skip that day:</string>
     <string name="save_skips">Save Skips</string>
     <string name="confirm">Confirm</string>
     <string name="upcoming_alarm">Upcoming Alarm</string>
@@ -116,13 +116,13 @@
     <string name="default_alarm_label">Alarm</string>
 
     <!-- Days for Custom Repeat Toggle Buttons -->
-    <string name="day_mon_short">M</string>
-    <string name="day_tue_short">T</string>
-    <string name="day_wed_short">W</string>
-    <string name="day_thu_short">T</string>
-    <string name="day_fri_short">F</string>
-    <string name="day_sat_short">S</string>
-    <string name="day_sun_short">S</string>
+    <string name="day_mon_short">Mon</string>
+    <string name="day_tue_short">Tue</string>
+    <string name="day_wed_short">Wed</string>
+    <string name="day_thu_short">Thu</string>
+    <string name="day_fri_short">Fri</string>
+    <string name="day_sat_short">Sat</string>
+    <string name="day_sun_short">Sun</string>
 
     <!-- Alarm Card Recurrence Text -->
     <string name="repeat_every_day">Every Day</string>
@@ -147,8 +147,12 @@
     <string name="toast_alarm_enabled">%1$s alarm enabled</string>
     <string name="toast_alarm_disabled">%1$s alarm disabled</string>
     <string name="toast_sync_url_empty">Sync URL cannot be empty</string>
-    <string name="toast_alarm_ring_in_hm">Alarm will ring in %1$d hours %2$d minutes</string>
-    <string name="toast_alarm_ring_in_m">Alarm will ring in %1$d minutes</string>
+    <string name="toast_alarm_ring_in">Alarm will ring in %1$s</string>
+    <string name="toast_alarm_disabled_no_dates">No ring dates remain; the alarm was switched off</string>
+    <string name="countdown_to_ring">Next ring in %1$s</string>
+    <string name="ring_in_minutes">%1$d min</string>
+    <string name="ring_in_hours_minutes">%1$d h %2$d min</string>
+    <string name="ring_in_days_hours_minutes">%1$d d %2$d h %3$d min</string>
     <string name="app_version_default">1.0.0</string>
     <string name="about_version">v%1$s</string>
 </resources>

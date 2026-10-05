@@ -25,6 +25,8 @@ public final class NextOccurrenceCalculatorTest {
     resolvesCustomDayBitmaskUsingSundayAsBitZero();
     appliesStatutoryHolidaysAndMakeupWorkdays();
     skipsExplicitlySkippedDates();
+    doesNotRollOverASkippedOneShotAlarm();
+    resolvesOneShotToTomorrowWhenTodayHasPassed();
     doesNotResurrectAnExpiredQuickNap();
     recalculatesUsingTheSuppliedZone();
     resolvesDstGapsAndOverlapsDeterministically();
@@ -95,6 +97,32 @@ public final class NextOccurrenceCalculatorTest {
         calculator.calculateNextTriggerAtMs(quickNap, Instant.parse("2026-06-08T10:00:00Z"), UTC);
 
     AlarmDeliveryTestSupport.assertEquals(0L, trigger, "expired Quick Nap has no replacement occurrence");
+  }
+
+  private static void doesNotRollOverASkippedOneShotAlarm() {
+    NextOccurrenceCalculator calculator = new DefaultNextOccurrenceCalculator(new FakeHolidayCalendar());
+    Set<String> skippedDates = new HashSet<>();
+    skippedDates.add("2026-06-08");
+    StoredAlarm oneShot = alarm(0, 0, false, skippedDates, 9, 0);
+
+    long trigger =
+        calculator.calculateNextTriggerAtMs(oneShot, Instant.parse("2026-06-07T12:00:00Z"), UTC);
+
+    AlarmDeliveryTestSupport.assertEquals(
+        0L, trigger, "a skipped one-shot occurrence is not replaced by another date");
+  }
+
+  private static void resolvesOneShotToTomorrowWhenTodayHasPassed() {
+    NextOccurrenceCalculator calculator = new DefaultNextOccurrenceCalculator(new FakeHolidayCalendar());
+    StoredAlarm oneShot = alarm(0, 0, false, Collections.emptySet(), 9, 0);
+
+    long trigger =
+        calculator.calculateNextTriggerAtMs(oneShot, Instant.parse("2026-06-07T12:00:00Z"), UTC);
+
+    AlarmDeliveryTestSupport.assertEquals(
+        Instant.parse("2026-06-08T09:00:00Z").toEpochMilli(),
+        trigger,
+        "a one-shot alarm rolls to tomorrow when today's time has passed");
   }
 
   private static void recalculatesUsingTheSuppliedZone() {
