@@ -49,7 +49,20 @@ bool TestSensorFusionFlipAndPickup() {
     return true;
 }
 
+bool TestShakeChallengeInvalidTargetIsSafe() {
+    ChallengeEngineImpl engine;
+    ChallengeState state;
+    state.type = ChallengeType::kShake;
+    state.target_shake_count = 0;  // Corrupt or legacy value must not divide by zero.
+
+    int progress = engine.RegisterShakeSample(&state, 0.0f, 15.5f, 9.8f);
+    EXPECT_TRUE(progress >= 0 && progress <= 100);
+    EXPECT_TRUE(state.current_shake_count >= 0);
+    return true;
+}
+
 TEST_MAIN_BEGIN
 RUN_TEST(TestShakeChallengeProgression);
 RUN_TEST(TestSensorFusionFlipAndPickup);
+RUN_TEST(TestShakeChallengeInvalidTargetIsSafe);
 TEST_MAIN_END

@@ -1,20 +1,151 @@
 #include "core/src/holiday/holiday_engine_impl.h"
 
+#include <cstring>
 #include <ctime>
-#include <iomanip>
-#include <sstream>
+#include <vector>
+
+#include "core/src/common/iso_date.h"
 
 namespace edom::alarm::core {
+
+namespace {
+
+bool IsJsonSpace(char c) {
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+
+// Reads the quoted value of `"key" : "value"` starting at or after search_from.
+bool ReadQuotedField(const std::string& json, const char* key, size_t search_from,
+                     std::string* value, size_t* end_pos) {
+    const size_t key_len = std::strlen(key);
+    const size_t key_pos = json.find(key, search_from);
+    if (key_pos == std::string::npos) {
+        return false;
+    }
+    size_t cursor = key_pos + key_len;
+    while (cursor < json.size() && IsJsonSpace(json[cursor])) {
+        ++cursor;
+    }
+    if (cursor >= json.size() || json[cursor] != ':') {
+        return false;
+    }
+    ++cursor;
+    while (cursor < json.size() && IsJsonSpace(json[cursor])) {
+        ++cursor;
+    }
+    if (cursor >= json.size() || json[cursor] != '"') {
+        return false;
+    }
+    const size_t open = cursor + 1;
+    const size_t close = json.find('"', open);
+    if (close == std::string::npos) {
+        return false;
+    }
+    *value = json.substr(open, close - open);
+    *end_pos = close + 1;
+    return true;
+}
+
+// Reads the integer value of `"key" : 12` starting at or after search_from.
+bool ReadIntField(const std::string& json, const char* key, size_t search_from, int* value,
+                  size_t* end_pos) {
+    const size_t key_len = std::strlen(key);
+    const size_t key_pos = json.find(key, search_from);
+    if (key_pos == std::string::npos) {
+        return false;
+    }
+    size_t cursor = key_pos + key_len;
+    while (cursor < json.size() && IsJsonSpace(json[cursor])) {
+        ++cursor;
+    }
+    if (cursor >= json.size() || json[cursor] != ':') {
+        return false;
+    }
+    ++cursor;
+    while (cursor < json.size() && IsJsonSpace(json[cursor])) {
+        ++cursor;
+    }
+    bool negative = false;
+    if (cursor < json.size() && json[cursor] == '-') {
+        negative = true;
+        ++cursor;
+    }
+    if (cursor >= json.size() || json[cursor] < '0' || json[cursor] > '9') {
+        return false;
+    }
+    long long parsed = 0;
+    while (cursor < json.size() && json[cursor] >= '0' && json[cursor] <= '9') {
+        if (parsed < 1000000) {
+            parsed = parsed * 10 + (json[cursor] - '0');
+        }
+        ++cursor;
+    }
+    *value = static_cast<int>(negative ? -parsed : parsed);
+    *end_pos = cursor;
+    return true;
+}
+
+// Appends the ISO dates of a JSON string array such as `"holidays": [ ... ]`.
+bool AppendDatesFromArray(const std::string& json, const char* key, data::DayType day_type,
+                          std::vector<data::HolidayEntity>* out_rules) {
+    const size_t key_len = std::strlen(key);
+    const size_t key_pos = json.find(key);
+    if (key_pos == std::string::npos) {
+        return false;
+    }
+    size_t cursor = json.find('[', key_pos + key_len);
+    if (cursor == std::string::npos) {
+        return false;
+    }
+    ++cursor;
+    bool appended = false;
+    while (cursor < json.size()) {
+        while (cursor < json.size() && (IsJsonSpace(json[cursor]) || json[cursor] == ',')) {
+            ++cursor;
+        }
+        if (cursor >= json.size() || json[cursor] == ']') {
+            break;
+        }
+        if (json[cursor] != '"') {
+            break;
+        }
+        const size_t open = cursor + 1;
+        const size_t close = json.find('"', open);
+        if (close == std::string::npos) {
+            break;
+        }
+        const std::string date_str = json.substr(open, close - open);
+        int year = 0;
+        if (ParseIsoDate(date_str, &year, nullptr, nullptr)) {
+            data::HolidayEntity entity;
+            entity.date_str = date_str;
+            entity.year = year;
+            entity.day_type = day_type;
+            out_rules->push_back(entity);
+            appended = true;
+        }
+        cursor = close + 1;
+    }
+    return appended;
+}
+
+}  // namespace
 
 HolidayEngineImpl::HolidayEngineImpl(data::IHolidayRepository* holiday_repo)
     : holiday_repo_(holiday_repo) {}
 
 int HolidayEngineImpl::GetDayOfWeek(const std::string& date_str) {
-    if (date_str.length() < 10) return -1;
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    if (!ParseIsoDate(date_str, &year, &month, &day)) {
+        return -1;
+    }
     std::tm time_in = {};
-    time_in.tm_year = std::stoi(date_str.substr(0, 4)) - 1900;
-    time_in.tm_mon = std::stoi(date_str.substr(5, 2)) - 1;
-    time_in.tm_mday = std::stoi(date_str.substr(8, 2));
+    time_in.tm_year = year - 1900;
+    time_in.tm_mon = month - 1;
+    time_in.tm_mday = day;
+    time_in.tm_isdst = -1;  // Let mktime resolve whether DST applies.
     std::mktime(&time_in);
     return time_in.tm_wday;  // 0 = Sunday, 1 = Monday ... 6 = Saturday
 }
@@ -53,41 +184,52 @@ bool HolidayEngineImpl::LoadBaselineJson(const std::string& json_content) {
     if (!holiday_repo_ || json_content.empty()) {
         return false;
     }
-    // Simple robust manual parser for rules JSON without external dependencies
-    // Format expected: "date": "YYYY-MM-DD", "type": N, "name": "..."
+    // Dependency-free parser supporting both bundled baseline payloads
+    // ("rules": [{"date": ..., "type": N}]) and the published HolidaySyncModel
+    // payload ("holidays"/"workdays" string arrays). Malformed input is rejected
+    // instead of aborting the host process.
     std::vector<data::HolidayEntity> rules;
-    size_t pos = 0;
-    while ((pos = json_content.find("\"date\":", pos)) != std::string::npos) {
-        size_t date_start = json_content.find("\"", pos + 7) + 1;
-        size_t date_end = json_content.find("\"", date_start);
-        std::string date_str = json_content.substr(date_start, date_end - date_start);
-
-        size_t type_pos = json_content.find("\"type\":", date_end);
-        if (type_pos == std::string::npos) break;
-        int type_val = std::stoi(json_content.substr(type_pos + 7, 2));
-
-        size_t name_pos = json_content.find("\"name\":", type_pos);
-        std::string name_str = "";
-        if (name_pos != std::string::npos && name_pos < json_content.find("}", type_pos)) {
-            size_t nstart = json_content.find("\"", name_pos + 7) + 1;
-            size_t nend = json_content.find("\"", nstart);
-            name_str = json_content.substr(nstart, nend - nstart);
+    size_t cursor = 0;
+    while (true) {
+        std::string date_str;
+        size_t date_end = 0;
+        if (!ReadQuotedField(json_content, "\"date\"", cursor, &date_str, &date_end)) {
+            break;
         }
-
-        data::HolidayEntity entity;
-        entity.date_str = date_str;
-        entity.year = std::stoi(date_str.substr(0, 4));
-        entity.day_type = static_cast<data::DayType>(type_val);
-        entity.name = name_str;
-        rules.push_back(entity);
-
-        pos = type_pos + 8;
+        int type_value = 0;
+        size_t type_end = 0;
+        if (!ReadIntField(json_content, "\"type\"", date_end, &type_value, &type_end)) {
+            break;
+        }
+        int year = 0;
+        if (ParseIsoDate(date_str, &year, nullptr, nullptr) && type_value >= 0 &&
+            type_value <= 3) {
+            data::HolidayEntity entity;
+            entity.date_str = date_str;
+            entity.year = year;
+            entity.day_type = static_cast<data::DayType>(type_value);
+            const size_t object_end = json_content.find('}', type_end);
+            std::string name;
+            size_t name_end = 0;
+            if (ReadQuotedField(json_content, "\"name\"", type_end, &name, &name_end) &&
+                (object_end == std::string::npos || name_end <= object_end)) {
+                entity.name = name;
+            }
+            rules.push_back(entity);
+        }
+        cursor = type_end;
     }
 
-    if (!rules.empty()) {
-        return holiday_repo_->BatchUpsertHolidayRules(rules);
+    if (rules.empty()) {
+        AppendDatesFromArray(json_content, "\"holidays\"", data::DayType::kStatutoryHoliday, &rules);
+        AppendDatesFromArray(json_content, "\"workdays\"", data::DayType::kCompensatoryWorkday,
+                             &rules);
     }
-    return true;
+
+    if (rules.empty()) {
+        return false;
+    }
+    return holiday_repo_->BatchUpsertHolidayRules(rules);
 }
 
 }  // namespace edom::alarm::core

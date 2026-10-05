@@ -110,7 +110,9 @@ public final class AlarmCapabilityEvaluator {
             NotificationManager manager = context.getSystemService(NotificationManager.class);
             return manager != null && manager.canUseFullScreenIntent();
         } catch (Exception e) {
-            return true;
+            // Fail closed: an unknown capability must surface the protection warning
+            // instead of silently claiming full-screen delivery works.
+            return false;
         }
     }
 

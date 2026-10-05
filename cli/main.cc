@@ -1,10 +1,12 @@
 #include <chrono>
+#include <cerrno>
 #include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
 
 #include "core/src/challenge/challenge_engine_impl.h"
+#include "core/src/common/iso_date.h"
 #include "core/src/holiday/holiday_engine_impl.h"
 #include "core/src/ringtone/weather_ringtone_mapper.h"
 #include "core/src/scheduler/countdown_formatter.h"
@@ -33,11 +35,34 @@ void PrintVersion() {
               << "Platforms: Android (Universal/ARM64/ARMv7/x86_64), Linux, macOS, Windows\n";
 }
 
+// Parses a strictly positive minute count, rejecting trailing garbage and
+// out-of-range values instead of relying on atoi's undefined overflow behaviour.
+bool ParsePositiveMinutes(const char* text, int* out_minutes) {
+    if (text == nullptr || *text == '\0') {
+        return false;
+    }
+    errno = 0;
+    char* end = nullptr;
+    const long long value = std::strtoll(text, &end, 10);
+    if (errno != 0 || end == text || *end != '\0') {
+        return false;
+    }
+    if (value < 1 || value > 1000000) {
+        return false;
+    }
+    *out_minutes = static_cast<int>(value);
+    return true;
+}
+
 int HandleCheckDate(const std::string& date_str) {
     edom::alarm::core::HolidayEngineImpl engine(nullptr);
+    const int dow = edom::alarm::core::HolidayEngineImpl::GetDayOfWeek(date_str);
+    if (dow < 0) {
+        std::cerr << "Error: invalid date '" << date_str << "', expected YYYY-MM-DD.\n";
+        return 1;
+    }
     auto day_type = engine.ClassifyDate(date_str);
     bool is_workday = engine.IsStatutoryWorkday(date_str);
-    int dow = edom::alarm::core::HolidayEngineImpl::GetDayOfWeek(date_str);
 
     const char* dow_str[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
                              "Thursday", "Friday", "Saturday"};
@@ -132,7 +157,11 @@ int main(int argc, char* argv[]) {
             std::cerr << "Usage: " << argv[0] << " countdown <minutes>\n";
             return 1;
         }
-        int mins = std::atoi(argv[2]);
+        int mins = 0;
+        if (!ParsePositiveMinutes(argv[2], &mins)) {
+            std::cerr << "Error: minutes must be a whole number between 1 and 1000000.\n";
+            return 1;
+        }
         return HandleCountdown(mins);
     }
     if (command == "weather") {

@@ -8,7 +8,9 @@ enum class StreamingPlatform { kQqMusic, kNetEaseMusic, kCustomStream, kLocal };
 
 class StreamingRingtoneResolver {
    public:
-    static constexpr const char* kDefaultFallbackUri = "android.resource://system/alarm_gentle";
+    // Must stay a URI the platform can actually play: android.resource:// URIs
+    // require an owning package, so the system alarm sound is used instead.
+    static constexpr const char* kDefaultFallbackUri = "content://settings/system/alarm_alert";
 
     // Resolves streaming URI with fallback protection
     static std::string ResolvePlayableUri(const std::string& primary_uri,

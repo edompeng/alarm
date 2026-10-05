@@ -24,7 +24,7 @@ public class RingtonePickerActivity extends Activity {
         Button btnConfirm = findViewById(R.id.btn_confirm_ringtone);
 
         btnConfirm.setOnClickListener(v -> {
-            String selectedUri = "android.resource://system/alarm_gentle";
+            String selectedUri = "content://settings/system/alarm_alert";
             int checkedId = rg.getCheckedRadioButtonId();
             if (checkedId == R.id.rb_dynamic_weather) {
                 selectedUri = "weather://dynamic_soundscape";

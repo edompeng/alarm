@@ -137,10 +137,11 @@ public class AlarmEditDialog extends Dialog {
         android.net.Uri defaultUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM);
         uris.add(defaultUri != null ? defaultUri.toString() : "");
 
+        android.database.Cursor cursor = null;
         try {
             android.media.RingtoneManager rm = new android.media.RingtoneManager(getContext());
             rm.setType(android.media.RingtoneManager.TYPE_ALARM);
-            android.database.Cursor cursor = rm.getCursor();
+            cursor = rm.getCursor();
             if (cursor != null) {
                 while (cursor.moveToNext()) {
                     String title = cursor.getString(android.media.RingtoneManager.TITLE_COLUMN_INDEX);
@@ -152,13 +153,17 @@ public class AlarmEditDialog extends Dialog {
                 }
             }
         } catch (Exception ignored) {
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
 
         if (titles.size() <= 1) {
             titles.add(getContext().getString(R.string.ringtone_classic_bell));
             uris.add("content://settings/system/alarm_alert");
             titles.add(getContext().getString(R.string.ringtone_digital_beep));
-            uris.add("android.resource://system/alarm_beep");
+            uris.add("content://settings/system/alarm_alert");
         }
 
         CharSequence[] items = titles.toArray(new CharSequence[0]);
@@ -198,7 +203,8 @@ public class AlarmEditDialog extends Dialog {
         }
 
         long id = mExistingItem != null ? mExistingItem.id : System.currentTimeMillis();
-        boolean isEnabled = true;
+        // Editing must not re-enable an alarm the user deliberately switched off.
+        boolean isEnabled = mExistingItem == null || mExistingItem.isEnabled;
 
         AlarmListAdapter.AlarmItemModel item = new AlarmListAdapter.AlarmItemModel(
                 id, hour, minute, isEnabled, repeatMode, daysBitmask, label,

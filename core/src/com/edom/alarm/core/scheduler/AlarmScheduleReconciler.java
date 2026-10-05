@@ -107,8 +107,12 @@ public final class AlarmScheduleReconciler {
         long nextTrigger = calculator.calculateNextTriggerAtMs(
                 alarm, Instant.ofEpochMilli(nowMs), zoneSupplier.get());
         if (nextTrigger <= nowMs) {
-            store.applyMissedTransition(outcome, alarm.withMissedState(expiration.missedState), false);
-            return alarm.withMissedState(expiration.missedState);
+            // No future occurrence can be computed: disabling the alarm prevents the
+            // missed outcome from being re-recorded on every reconcile pass.
+            StoredAlarm exhausted =
+                    alarm.withMissedState(expiration.missedState).withEnabled(false);
+            store.applyMissedTransition(outcome, exhausted, false);
+            return exhausted;
         }
         StoredAlarm advanced = AlarmDeliveryPolicy.createNextOccurrence(alarm, nextTrigger);
         store.applyMissedTransition(outcome, advanced, false);

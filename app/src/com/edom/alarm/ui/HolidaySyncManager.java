@@ -13,11 +13,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,6 +39,9 @@ public class HolidaySyncManager {
     public static final String KEY_CACHED_WORKDAYS = "cached_workday_dates";
 
     private static final long SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000L;
+    // Hard cap for remote payloads: a hostile or broken server must not be able
+    // to exhaust the app heap through the sync endpoint.
+    private static final int MAX_RESPONSE_CHARS = 1 << 20;  // 1 MiB
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
     private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
 
@@ -191,17 +194,11 @@ public class HolidaySyncManager {
 
         // 3. Fallback to standard day of week
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-            Date date = sdf.parse(dateStr);
-            if (date != null) {
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(date);
-                int dow = cal.get(Calendar.DAY_OF_WEEK);
-                // Sunday (1) or Saturday (7) -> weekend
-                return dow != Calendar.SUNDAY && dow != Calendar.SATURDAY;
-            }
-        } catch (Exception ignored) {
+            DayOfWeek dayOfWeek = LocalDate.parse(dateStr).getDayOfWeek();
+            return dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY;
+        } catch (DateTimeParseException ignored) {
         }
+        // Unparseable dates must not silently suppress an alarm.
         return true;
     }
 
@@ -212,7 +209,7 @@ public class HolidaySyncManager {
             loadBaselineRules(context);
             set = prefs.getStringSet(KEY_CACHED_HOLIDAYS, new HashSet<>());
         }
-        return set != null ? set : new HashSet<>();
+        return set != null ? Collections.unmodifiableSet(new HashSet<>(set)) : new HashSet<>();
     }
 
     public static Set<String> getCachedWorkdays(Context context) {
@@ -222,19 +219,18 @@ public class HolidaySyncManager {
             loadBaselineRules(context);
             set = prefs.getStringSet(KEY_CACHED_WORKDAYS, new HashSet<>());
         }
-        return set != null ? set : new HashSet<>();
+        return set != null ? Collections.unmodifiableSet(new HashSet<>(set)) : new HashSet<>();
     }
 
     private static synchronized void loadBaselineRules(Context context) {
-        try {
-            InputStream is = context.getResources().openRawResource(R.raw.statutory_holidays_baseline);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+        try (InputStream is =
+                        context.getResources().openRawResource(R.raw.statutory_holidays_baseline);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
                 sb.append(line);
             }
-            reader.close();
 
             JSONObject json = new JSONObject(sb.toString());
             JSONArray rules = json.optJSONArray("rules");
@@ -269,6 +265,12 @@ public class HolidaySyncManager {
 
     private static SyncResult executeFetchAndParse(String urlString) throws Exception {
         URL url = new URL(urlString);
+        String protocol = url.getProtocol();
+        if (!"https".equalsIgnoreCase(protocol)) {
+            // The synced calendar decides whether alarms ring, so plaintext or local
+            // schemes must never be accepted for a remote source.
+            throw new RuntimeException("Invalid sync URL scheme: " + protocol + " (https required)");
+        }
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
         conn.setConnectTimeout(8000);
@@ -278,17 +280,29 @@ public class HolidaySyncManager {
 
         int responseCode = conn.getResponseCode();
         if (responseCode != HttpURLConnection.HTTP_OK) {
+            conn.disconnect();
             throw new RuntimeException("HTTP Error: " + responseCode + " " + conn.getResponseMessage());
         }
-
-        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-        StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = in.readLine()) != null) {
-            sb.append(line);
+        if (!"https".equalsIgnoreCase(conn.getURL().getProtocol())) {
+            conn.disconnect();
+            throw new RuntimeException("Sync URL redirected to an insecure scheme");
         }
-        in.close();
-        conn.disconnect();
+
+        StringBuilder sb = new StringBuilder();
+        int totalChars = 0;
+        try (BufferedReader in =
+                new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
+            String line;
+            while ((line = in.readLine()) != null) {
+                totalChars += line.length();
+                if (totalChars > MAX_RESPONSE_CHARS) {
+                    throw new RuntimeException("Holiday sync payload exceeds the 1 MiB safety limit");
+                }
+                sb.append(line);
+            }
+        } finally {
+            conn.disconnect();
+        }
 
         String body = sb.toString().trim();
         if (body.isEmpty()) {
@@ -377,6 +391,12 @@ public class HolidaySyncManager {
         }
         if (!dateStr.startsWith(String.valueOf(expectedYear))) {
             throw new RuntimeException("Date " + dateStr + " does not match specified year " + expectedYear);
+        }
+        try {
+            // Reject impossible calendar dates such as 2026-02-30 or 2026-13-01.
+            LocalDate.parse(dateStr);
+        } catch (DateTimeParseException exception) {
+            throw new RuntimeException("Invalid calendar date: " + dateStr);
         }
     }
 

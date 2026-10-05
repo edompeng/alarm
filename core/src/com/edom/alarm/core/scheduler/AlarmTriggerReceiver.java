@@ -1,11 +1,15 @@
 package com.edom.alarm.core.scheduler;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.net.Uri;
+import android.provider.Settings;
 import android.util.Log;
 import com.edom.alarm.AlarmApplication;
 import com.edom.alarm.R;
@@ -182,21 +186,27 @@ public final class AlarmTriggerReceiver extends BroadcastReceiver {
                 alarm.lastClaimedOccurrenceId, alarm.missedState, alarm.sourceJson);
     }
 
-    private void postFallbackNotification(Context context, StoredAlarm alarm) {
+    /** Fallback surface for a claimed occurrence that cannot start its ringing service. */
+    static void postFallbackNotification(Context context, StoredAlarm alarm) {
         CapabilitySnapshot capabilities = new AlarmCapabilityEvaluator(context).evaluate();
         if (!capabilities.notificationsAvailable) {
             return;
         }
+        ensureFallbackChannel(context);
+        // The stored record may already point at the following recurring occurrence;
+        // commands must carry the occurrence that was actually claimed for this ring.
+        String ringingOccurrenceId = alarm.lastClaimedOccurrenceId.isEmpty()
+                ? alarm.occurrenceId : alarm.lastClaimedOccurrenceId;
         Intent presentation = new Intent(context, RingingActivity.class)
                 .putExtra(EXTRA_ALARM_ID, alarm.id)
-                .putExtra(EXTRA_OCCURRENCE_ID, alarm.occurrenceId);
+                .putExtra(EXTRA_OCCURRENCE_ID, ringingOccurrenceId);
         PendingIntent content = PendingIntent.getActivity(
                 context,
                 AlarmDeliveryPolicy.deterministicRequestCode(alarm.id),
                 presentation,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder = new Notification.Builder(
-                context, "channel_smart_alarm_high_priority")
+                context, CHANNEL_ID_FALLBACK)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(context.getString(R.string.app_name))
                 .setContentText(context.getString(R.string.alarm_ringing))
@@ -211,6 +221,28 @@ public final class AlarmTriggerReceiver extends BroadcastReceiver {
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         if (manager != null) {
             manager.notify(AlarmDeliveryPolicy.deterministicRequestCode(alarm.id), notification);
+        }
+    }
+
+    private static final String CHANNEL_ID_FALLBACK = "channel_smart_alarm_fallback";
+
+    private static void ensureFallbackChannel(Context context) {
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID_FALLBACK,
+                context.getString(R.string.alarm_notification_channel),
+                NotificationManager.IMPORTANCE_HIGH);
+        channel.setDescription(context.getString(R.string.alarm_notification_channel_description));
+        Uri sound = Settings.System.DEFAULT_ALARM_ALERT_URI;
+        if (sound != null) {
+            channel.setSound(sound, new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build());
+        }
+        channel.enableVibration(true);
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.createNotificationChannel(channel);
         }
     }
 }

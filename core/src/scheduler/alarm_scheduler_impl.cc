@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <ctime>
-#include <iomanip>
-#include <sstream>
+
+#include "core/src/common/iso_date.h"
 
 namespace edom::alarm::core {
 
@@ -20,15 +20,27 @@ std::string AlarmSchedulerImpl::FormatIsoDate(int64_t epoch_ms) {
 }
 
 int64_t AlarmSchedulerImpl::ComputeEpochMs(const std::string& date_str, int hour, int minute) {
-    if (date_str.length() < 10) return -1;
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    if (!ParseIsoDate(date_str, &year, &month, &day)) {
+        return -1;
+    }
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+        return -1;
+    }
     std::tm time_in = {};
-    time_in.tm_year = std::stoi(date_str.substr(0, 4)) - 1900;
-    time_in.tm_mon = std::stoi(date_str.substr(5, 2)) - 1;
-    time_in.tm_mday = std::stoi(date_str.substr(8, 2));
+    time_in.tm_year = year - 1900;
+    time_in.tm_mon = month - 1;
+    time_in.tm_mday = day;
     time_in.tm_hour = hour;
     time_in.tm_min = minute;
     time_in.tm_sec = 0;
+    time_in.tm_isdst = -1;  // Let mktime resolve whether DST applies.
     std::time_t epoch_sec = std::mktime(&time_in);
+    if (epoch_sec == static_cast<std::time_t>(-1)) {
+        return -1;
+    }
     return static_cast<int64_t>(epoch_sec) * 1000;
 }
 
@@ -52,9 +64,12 @@ int64_t AlarmSchedulerImpl::CalculateNextTriggerTime(const data::AlarmEntity& al
         if (today_target > from_epoch_ms && !is_skipped(today_str)) {
             return today_target;
         }
-        // Tomorrow
+        // Tomorrow. A one-off occurrence that is skipped does not roll over again.
         int64_t tomorrow_ms = from_epoch_ms + 24LL * 3600 * 1000;
         std::string tomorrow_str = FormatIsoDate(tomorrow_ms);
+        if (is_skipped(tomorrow_str)) {
+            return -1;
+        }
         return ComputeEpochMs(tomorrow_str, alarm.hour, alarm.minute);
     }
 

@@ -1,15 +1,27 @@
 #include "core/src/scheduler/oem_vendor_alarm_hook.h"
 
-#include <algorithm>
-
 namespace edom::alarm::core {
+
+namespace {
+
+// ASCII-only lowercasing: std::tolower on a negative signed char is undefined
+// behaviour, and OEM manufacturer strings can contain non-ASCII bytes.
+std::string ToLowerAscii(const std::string& value) {
+    std::string lower = value;
+    for (char& c : lower) {
+        if (c >= 'A' && c <= 'Z') {
+            c = static_cast<char>(c - 'A' + 'a');
+        }
+    }
+    return lower;
+}
+
+}  // namespace
 
 OemVendorType OemVendorAlarmHook::DetectVendor(const std::string& manufacturer,
                                                const std::string& brand) {
-    std::string m = manufacturer;
-    std::string b = brand;
-    std::transform(m.begin(), m.end(), m.begin(), ::tolower);
-    std::transform(b.begin(), b.end(), b.begin(), ::tolower);
+    const std::string m = ToLowerAscii(manufacturer);
+    const std::string b = ToLowerAscii(brand);
 
     if (m.find("samsung") != std::string::npos || b.find("samsung") != std::string::npos) {
         return OemVendorType::kSamsung;

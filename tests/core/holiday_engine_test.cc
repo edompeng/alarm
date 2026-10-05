@@ -23,6 +23,20 @@ bool TestDayOfWeekCalculation() {
     return true;
 }
 
+bool TestDayOfWeekRejectsMalformedDates() {
+    // Malformed or impossible dates must be reported instead of throwing or
+    // silently normalizing into a different day.
+    EXPECT_EQ(HolidayEngineImpl::GetDayOfWeek("abcd-01-01"), -1);
+    EXPECT_EQ(HolidayEngineImpl::GetDayOfWeek("2026-1-1"), -1);
+    EXPECT_EQ(HolidayEngineImpl::GetDayOfWeek("2026-13-01"), -1);
+    EXPECT_EQ(HolidayEngineImpl::GetDayOfWeek("2026-02-30"), -1);
+    EXPECT_EQ(HolidayEngineImpl::GetDayOfWeek(""), -1);
+
+    // Valid dates keep their original behaviour (2026-02-28 is a Saturday).
+    EXPECT_EQ(HolidayEngineImpl::GetDayOfWeek("2026-02-28"), 6);
+    return true;
+}
+
 bool TestHolidayEngineClassificationAndWorkday() {
     std::remove(kTestDbPath);
     AlarmDatabaseHelper db_helper(kTestDbPath);
@@ -95,6 +109,58 @@ bool TestBaselineJsonParsing() {
     return true;
 }
 
+bool TestHolidaySyncModelJsonParsing() {
+    std::remove(kTestDbPath);
+    AlarmDatabaseHelper db_helper(kTestDbPath);
+    EXPECT_TRUE(db_helper.Open());
+    HolidayRepositoryImpl repo(&db_helper);
+    HolidayEngineImpl engine(&repo);
+
+    // Published HolidaySyncModel payload: holidays/workdays string arrays.
+    const std::string json = R"({
+        "year": 2026,
+        "authority": "General Office of the State Council",
+        "holidays": ["2026-01-01", "2026-01-02", "not-a-date"],
+        "workdays": ["2026-02-15"]
+    })";
+
+    EXPECT_TRUE(engine.LoadBaselineJson(json));
+    EXPECT_FALSE(engine.IsStatutoryWorkday("2026-01-01"));  // Statutory holiday
+    EXPECT_TRUE(engine.IsStatutoryWorkday("2026-02-15"));   // Compensatory workday
+
+    db_helper.Close();
+    std::remove(kTestDbPath);
+    return true;
+}
+
+bool TestMalformedBaselineJsonIsRejected() {
+    std::remove(kTestDbPath);
+    AlarmDatabaseHelper db_helper(kTestDbPath);
+    EXPECT_TRUE(db_helper.Open());
+    HolidayRepositoryImpl repo(&db_helper);
+    HolidayEngineImpl engine(&repo);
+
+    // Hostile or truncated payloads must never abort the process.
+    EXPECT_FALSE(engine.LoadBaselineJson("{ this is not json"));
+    EXPECT_FALSE(engine.LoadBaselineJson(R"({"date": "abcd-01-01", "type": 2})"));
+    EXPECT_FALSE(engine.LoadBaselineJson(R"({"date": "2026-01-01", "type": 99})"));
+    EXPECT_FALSE(engine.LoadBaselineJson(R"({"holidays": ["2026-02-30"]})"));
+
+    // A valid entry alongside an invalid one still loads the valid rule.
+    const std::string mixed = R"({
+        "rules": [
+            {"date": "abcd-01-01", "type": 2, "name": "broken"},
+            {"date": "2026-10-01", "type": 2, "name": "国庆节"}
+        ]
+    })";
+    EXPECT_TRUE(engine.LoadBaselineJson(mixed));
+    EXPECT_FALSE(engine.IsStatutoryWorkday("2026-10-01"));
+
+    db_helper.Close();
+    std::remove(kTestDbPath);
+    return true;
+}
+
 bool TestHolidayCloudSyncService() {
     std::remove(kTestDbPath);
     AlarmDatabaseHelper db_helper(kTestDbPath);
@@ -130,7 +196,10 @@ bool TestHolidayCloudSyncService() {
 
 TEST_MAIN_BEGIN
 RUN_TEST(TestDayOfWeekCalculation);
+RUN_TEST(TestDayOfWeekRejectsMalformedDates);
 RUN_TEST(TestHolidayEngineClassificationAndWorkday);
 RUN_TEST(TestBaselineJsonParsing);
+RUN_TEST(TestHolidaySyncModelJsonParsing);
+RUN_TEST(TestMalformedBaselineJsonIsRejected);
 RUN_TEST(TestHolidayCloudSyncService);
 TEST_MAIN_END

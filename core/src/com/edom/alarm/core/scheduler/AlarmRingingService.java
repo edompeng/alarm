@@ -23,6 +23,7 @@ import com.edom.alarm.R;
 import com.edom.alarm.core.scheduler.AlarmDeliveryModels.Registration;
 import com.edom.alarm.core.scheduler.AlarmDeliveryModels.StoredAlarm;
 import com.edom.alarm.ui.RingingActivity;
+import com.edom.alarm.ui.LocalizationManager;
 
 /** Owns bounded ringing resources for one claimed occurrence. */
 public final class AlarmRingingService extends Service {
@@ -48,6 +49,7 @@ public final class AlarmRingingService extends Service {
     private long activeAlarmId = -1L;
     private String activeOccurrenceId = "";
     private long activeSessionToken;
+    private boolean audioFallbackAttempted;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -58,13 +60,22 @@ public final class AlarmRingingService extends Service {
         if (ACTION_STOP.equals(intent.getAction()) || ACTION_DISMISS.equals(intent.getAction())
                 || ACTION_SNOOZE.equals(intent.getAction())) {
             if (isActiveCommand(intent)) {
-                if (ACTION_SNOOZE.equals(intent.getAction()) && !scheduleSnooze()) {
+                if (ACTION_SNOOZE.equals(intent.getAction()) && !scheduleSnooze(activeAlarmId)) {
                     return START_NOT_STICKY;
                 }
                 if (ACTION_DISMISS.equals(intent.getAction())) {
-                    completeActiveOccurrence();
+                    completeActiveOccurrence(activeAlarmId);
                 }
                 stopSelf();
+            } else if (handleClaimedOccurrenceCommand(intent)) {
+                if (activeAlarmId < 0L) {
+                    // Never tear down a different alarm that is still ringing.
+                    stopSelf();
+                }
+            } else if (activeAlarmId < 0L) {
+                // Stale command for an already finished session: do not leave an empty
+                // started service alive without a foreground notification.
+                stopSelf(startId);
             }
             return START_NOT_STICKY;
         }
@@ -89,13 +100,26 @@ public final class AlarmRingingService extends Service {
 
         ensureChannel(this);
         Notification notification = buildNotification(intent, alarmId);
-        if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(
-                    AlarmDeliveryPolicy.deterministicRequestCode(alarmId),
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-        } else {
-            startForeground(AlarmDeliveryPolicy.deterministicRequestCode(alarmId), notification);
+        try {
+            if (Build.VERSION.SDK_INT >= 29) {
+                startForeground(
+                        AlarmDeliveryPolicy.deterministicRequestCode(alarmId),
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+                startForeground(AlarmDeliveryPolicy.deterministicRequestCode(alarmId), notification);
+            }
+        } catch (RuntimeException rejection) {
+            // Android 12+ may refuse a background foreground-service start. Degrade to
+            // an audible high-priority notification instead of crashing silently.
+            Log.e(TAG, "Foreground ringing service was rejected", rejection);
+            StoredAlarm claimed = AlarmApplication.from(this).alarmStore().findById(alarmId);
+            if (claimed != null) {
+                AlarmTriggerReceiver.postFallbackNotification(this, claimed);
+            }
+            releaseResources();
+            stopSelf();
+            return START_NOT_STICKY;
         }
         acquireWakeLock();
         startAudio(intent.getStringExtra(EXTRA_RINGTONE_URI));
@@ -118,6 +142,7 @@ public final class AlarmRingingService extends Service {
     }
 
     private Notification buildNotification(Intent source, long alarmId) {
+        Context localizedContext = LocalizationManager.wrapContext(this);
         Intent presentation = new Intent(this, RingingActivity.class)
                 .setAction(ACTION_START)
                 .putExtras(source)
@@ -146,25 +171,27 @@ public final class AlarmRingingService extends Service {
 
         return new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText(getString(R.string.alarm_ringing))
+                .setContentTitle(localizedContext.getString(R.string.app_name))
+                .setContentText(localizedContext.getString(R.string.alarm_ringing))
                 .setCategory(Notification.CATEGORY_ALARM)
                 .setPriority(Notification.PRIORITY_MAX)
                 .setOngoing(true)
                 .setFullScreenIntent(fullScreen, true)
                 .addAction(new Notification.Action.Builder(
                         android.R.drawable.ic_menu_close_clear_cancel,
-                        getString(R.string.dismiss_alarm),
+                        localizedContext.getString(R.string.dismiss_alarm),
                         dismiss).build())
                 .build();
     }
 
     public static void ensureChannel(Context context) {
+        Context localizedContext = LocalizationManager.wrapContext(context);
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                context.getString(R.string.alarm_notification_channel),
+                localizedContext.getString(R.string.alarm_notification_channel),
                 NotificationManager.IMPORTANCE_HIGH);
-        channel.setDescription(context.getString(R.string.alarm_notification_channel_description));
+        channel.setDescription(
+                localizedContext.getString(R.string.alarm_notification_channel_description));
         channel.enableVibration(true);
         channel.setSound(null, null);
         NotificationManager manager = context.getSystemService(NotificationManager.class);
@@ -183,8 +210,28 @@ public final class AlarmRingingService extends Service {
     }
 
     private void startAudio(String ringtoneUri) {
-        Uri uri = ringtoneUri == null || ringtoneUri.isEmpty()
+        audioFallbackAttempted = false;
+        Uri primary = ringtoneUri == null || ringtoneUri.isEmpty()
                 ? Settings.System.DEFAULT_ALARM_ALERT_URI : Uri.parse(ringtoneUri);
+        if (!prepareAudio(primary) && !tryDefaultAudio(primary)) {
+            Log.e(TAG, "Unable to play any alarm sound for the active occurrence");
+        }
+    }
+
+    private boolean tryDefaultAudio(Uri failedUri) {
+        Uri fallback = Settings.System.DEFAULT_ALARM_ALERT_URI;
+        if (audioFallbackAttempted || fallback == null || fallback.equals(failedUri)) {
+            return false;
+        }
+        audioFallbackAttempted = true;
+        Log.w(TAG, "Falling back to the system alarm sound");
+        return prepareAudio(fallback);
+    }
+
+    private boolean prepareAudio(Uri uri) {
+        if (uri == null) {
+            return false;
+        }
         try {
             mediaPlayer = new MediaPlayer();
             mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
@@ -194,12 +241,29 @@ public final class AlarmRingingService extends Service {
             mediaPlayer.setDataSource(this, uri);
             mediaPlayer.setLooping(true);
             mediaPlayer.setOnPreparedListener(MediaPlayer::start);
+            mediaPlayer.setOnErrorListener((player, what, extra) -> {
+                Log.e(TAG, "MediaPlayer error " + what + "/" + extra + " for " + uri);
+                releasePlayer();
+                tryDefaultAudio(uri);
+                return true;
+            });
             mediaPlayer.prepareAsync();
+            return true;
         } catch (Exception failure) {
-            if (mediaPlayer != null) {
+            Log.e(TAG, "Unable to prepare alarm audio " + uri, failure);
+            releasePlayer();
+            return false;
+        }
+    }
+
+    private void releasePlayer() {
+        if (mediaPlayer != null) {
+            try {
                 mediaPlayer.release();
-                mediaPlayer = null;
+            } catch (RuntimeException ignored) {
+                // Release is best-effort during error recovery.
             }
+            mediaPlayer = null;
         }
     }
 
@@ -215,7 +279,7 @@ public final class AlarmRingingService extends Service {
                 && activeOccurrenceId.equals(intent.getStringExtra(EXTRA_OCCURRENCE_ID));
     }
 
-    private boolean scheduleSnooze() {
+    private boolean scheduleSnooze(long alarmId) {
         AlarmApplication application = AlarmApplication.from(this);
         if (!(application.alarmStore() instanceof SharedPreferencesAlarmScheduleStore)) {
             Log.e(TAG, "Alarm store does not support an atomic snooze transition");
@@ -223,39 +287,67 @@ public final class AlarmRingingService extends Service {
         }
         SharedPreferencesAlarmScheduleStore store =
                 (SharedPreferencesAlarmScheduleStore) application.alarmStore();
-        StoredAlarm snoozed = store.createSnoozedOccurrence(
-                activeAlarmId, System.currentTimeMillis());
+        StoredAlarm snoozed = store.createSnoozedOccurrence(alarmId, System.currentTimeMillis());
         if (snoozed == null) {
-            Log.i(TAG, "Snooze rejected for alarm " + activeAlarmId);
+            Log.i(TAG, "Snooze rejected for alarm " + alarmId);
             return false;
         }
-        application.registrationGateway().cancelAdvanceNotification(activeAlarmId);
+        application.registrationGateway().cancelAdvanceNotification(alarmId);
         Registration registration = application.registrationGateway().schedule(snoozed);
         if (!registration.isRegistered()) {
-            Log.e(TAG, "Failed to register snooze for alarm " + activeAlarmId
+            Log.e(TAG, "Failed to register snooze for alarm " + alarmId
                     + ": " + registration.failureMessage);
             return false;
         }
         return true;
     }
 
-    private void completeActiveOccurrence() {
+    private void completeActiveOccurrence(long alarmId) {
         AlarmApplication application = AlarmApplication.from(this);
         if (application.alarmStore() instanceof SharedPreferencesAlarmScheduleStore) {
             ((SharedPreferencesAlarmScheduleStore) application.alarmStore())
-                    .completeRingingOccurrence(activeAlarmId);
+                    .completeRingingOccurrence(alarmId);
         } else {
-            StoredAlarm alarm = application.alarmStore().findById(activeAlarmId);
+            StoredAlarm alarm = application.alarmStore().findById(alarmId);
             if (alarm != null && alarm.quickNap) {
-                application.alarmStore().delete(activeAlarmId);
+                application.alarmStore().delete(alarmId);
             } else if (alarm != null && alarm.repeatMode == 0) {
                 application.alarmStore().save(alarm.withEnabled(false));
             }
         }
-        StoredAlarm remaining = application.alarmStore().findById(activeAlarmId);
+        StoredAlarm remaining = application.alarmStore().findById(alarmId);
         if (remaining == null || !remaining.enabled) {
-            application.registrationGateway().cancel(activeAlarmId);
-            application.registrationGateway().cancelAdvanceNotification(activeAlarmId);
+            application.registrationGateway().cancel(alarmId);
+            application.registrationGateway().cancelAdvanceNotification(alarmId);
+        }
+    }
+
+    /**
+     * Honors snooze/dismiss for an occurrence that was already claimed but whose ringing
+     * session is no longer running (reclaimed process or rejected foreground handoff).
+     */
+    private boolean handleClaimedOccurrenceCommand(Intent intent) {
+        long alarmId = intent.getLongExtra(EXTRA_ALARM_ID, -1L);
+        String occurrenceId = intent.getStringExtra(EXTRA_OCCURRENCE_ID);
+        if (alarmId < 0L || occurrenceId == null || occurrenceId.isEmpty()) {
+            return false;
+        }
+        StoredAlarm alarm = AlarmApplication.from(this).alarmStore().findById(alarmId);
+        if (alarm == null || !occurrenceId.equals(alarm.lastClaimedOccurrenceId)) {
+            return false;
+        }
+        cancelRingingNotification(alarmId);
+        if (ACTION_SNOOZE.equals(intent.getAction())) {
+            return scheduleSnooze(alarmId);
+        }
+        completeActiveOccurrence(alarmId);
+        return true;
+    }
+
+    private void cancelRingingNotification(long alarmId) {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.cancel(AlarmDeliveryPolicy.deterministicRequestCode(alarmId));
         }
     }
 
@@ -264,7 +356,7 @@ public final class AlarmRingingService extends Service {
             if (sessionToken != activeSessionToken || activeAlarmId < 0L) {
                 return;
             }
-            completeActiveOccurrence();
+            completeActiveOccurrence(activeAlarmId);
             stopSelf();
         };
         mainHandler.postDelayed(timeoutAction, SAFETY_TIMEOUT_MS);

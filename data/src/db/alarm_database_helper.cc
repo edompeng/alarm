@@ -67,7 +67,7 @@ bool AlarmDatabaseHelper::CreateTables() {
             force_speaker INTEGER NOT NULL DEFAULT 1 CHECK (force_speaker IN (0, 1)),
             ringtone_type TEXT NOT NULL DEFAULT 'LOCAL',
             ringtone_uri TEXT NOT NULL DEFAULT 'content://settings/system/alarm_alert',
-            ringtone_fallback_uri TEXT NOT NULL DEFAULT 'android.resource://system/alarm_beep',
+            ringtone_fallback_uri TEXT NOT NULL DEFAULT 'content://settings/system/alarm_alert',
             snooze_interval_minutes INTEGER NOT NULL DEFAULT 10 CHECK (snooze_interval_minutes >= 1 AND snooze_interval_minutes <= 60),
             snooze_max_count INTEGER NOT NULL DEFAULT 3,
             challenge_type TEXT NOT NULL DEFAULT 'NONE',

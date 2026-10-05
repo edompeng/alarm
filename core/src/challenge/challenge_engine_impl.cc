@@ -41,14 +41,17 @@ int ChallengeEngineImpl::RegisterShakeSample(ChallengeState* state, float ax, fl
     if (!state || state->type != ChallengeType::kShake) {
         return 100;
     }
+    // Guard against a malformed target: integer division by zero would produce a
+    // NaN that is undefined behaviour when cast back to int.
+    const int target_shake_count = state->target_shake_count > 0 ? state->target_shake_count : 30;
     if (ShakeChallengeStrategy::DetectShake(ax, ay, az, &last_shake_magnitude_)) {
         state->current_shake_count++;
-        if (state->current_shake_count >= state->target_shake_count) {
+        if (state->current_shake_count >= target_shake_count) {
             state->is_completed = true;
         }
     }
     int progress =
-        static_cast<int>((state->current_shake_count * 100.0f) / state->target_shake_count);
+        static_cast<int>((state->current_shake_count * 100.0f) / target_shake_count);
     return std::clamp(progress, 0, 100);
 }
 

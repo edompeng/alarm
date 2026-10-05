@@ -22,7 +22,7 @@ struct AlarmEntity {
     bool force_speaker = true;
     std::string ringtone_type = "LOCAL";
     std::string ringtone_uri = "content://settings/system/alarm_alert";
-    std::string ringtone_fallback_uri = "android.resource://system/alarm_beep";
+    std::string ringtone_fallback_uri = "content://settings/system/alarm_alert";
     int snooze_interval_minutes = 10;
     int snooze_max_count = 3;  // -1 indicates infinite
     std::string challenge_type = "NONE";

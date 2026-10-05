@@ -21,6 +21,15 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Android 11+ package visibility for OEM background-settings deep links. -->
+    <queries>
+        <package android:name="com.vivo.abe" />
+        <package android:name="com.iqoo.secure" />
+        <package android:name="com.vivo.permissionmanager" />
+        <package android:name="com.samsung.android.lool" />
+        <package android:name="com.samsung.android.sm" />
+    </queries>
+
     <application
         android:name=".AlarmApplication"
         android:allowBackup="false"

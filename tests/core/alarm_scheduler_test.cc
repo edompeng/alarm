@@ -2,6 +2,7 @@
 
 #include "core/src/holiday/holiday_engine_impl.h"
 #include "core/src/scheduler/alarm_scheduler_impl.h"
+#include "core/src/scheduler/oem_vendor_alarm_hook.h"
 #include "data/src/db/alarm_database_helper.h"
 #include "data/src/repository/holiday_repository_impl.h"
 #include "tests/test_framework.h"
@@ -38,6 +39,49 @@ bool TestOnceAlarmCalculation() {
     int64_t expected_tmrw = AlarmSchedulerImpl::ComputeEpochMs("2026-06-02", 8, 30);
     EXPECT_EQ(next_trigger_tmrw, expected_tmrw);
 
+    return true;
+}
+
+bool TestSchedulerRejectsMalformedInput() {
+    // Impossible dates and out-of-range clock values must be reported as invalid
+    // rather than normalized silently or aborting the process.
+    EXPECT_EQ(AlarmSchedulerImpl::ComputeEpochMs("abcd-01-01", 8, 0), -1);
+    EXPECT_EQ(AlarmSchedulerImpl::ComputeEpochMs("2026-02-30", 8, 0), -1);
+    EXPECT_EQ(AlarmSchedulerImpl::ComputeEpochMs("2026-1-1", 8, 0), -1);
+    EXPECT_EQ(AlarmSchedulerImpl::ComputeEpochMs("2026-01-01", 24, 0), -1);
+    EXPECT_EQ(AlarmSchedulerImpl::ComputeEpochMs("2026-01-01", -1, 0), -1);
+    EXPECT_EQ(AlarmSchedulerImpl::ComputeEpochMs("2026-01-01", 8, 60), -1);
+    EXPECT_NE(AlarmSchedulerImpl::ComputeEpochMs("2026-01-01", 8, 0), -1);
+    return true;
+}
+
+bool TestOnceAlarmSkippedTomorrowReturnsNoTrigger() {
+    AlarmSchedulerImpl scheduler(nullptr);
+    AlarmEntity alarm;
+    alarm.hour = 8;
+    alarm.minute = 30;
+    alarm.repeat_mode = RepeatMode::kOnce;
+
+    // 2026-06-01 09:00 -> today's occurrence has passed, tomorrow is skipped.
+    int64_t passed_time = AlarmSchedulerImpl::ComputeEpochMs("2026-06-01", 9, 0);
+    std::vector<std::string> skips = {"2026-06-02"};
+    EXPECT_EQ(scheduler.CalculateNextTriggerTime(alarm, passed_time, skips), -1);
+
+    // Without the skip the one-off occurrence still rolls to tomorrow.
+    int64_t expected_tmrw = AlarmSchedulerImpl::ComputeEpochMs("2026-06-02", 8, 30);
+    EXPECT_EQ(scheduler.CalculateNextTriggerTime(alarm, passed_time, {}), expected_tmrw);
+    return true;
+}
+
+bool TestOemVendorDetectionHandlesNonAscii() {
+    // Non-ASCII manufacturer strings must not trigger undefined behaviour in the
+    // ASCII lowercasing path.
+    EXPECT_EQ(static_cast<int>(OemVendorAlarmHook::DetectVendor("小米", "Xiaomi")),
+              static_cast<int>(OemVendorType::kStandardAndroid));
+    EXPECT_EQ(static_cast<int>(OemVendorAlarmHook::DetectVendor("SAMSUNG", "samsung")),
+              static_cast<int>(OemVendorType::kSamsung));
+    EXPECT_EQ(static_cast<int>(OemVendorAlarmHook::DetectVendor("Vivo", "iQOO")),
+              static_cast<int>(OemVendorType::kIQOOVivo));
     return true;
 }
 
@@ -93,5 +137,8 @@ bool TestStatutoryWorkdaySchedulerWithHolidays() {
 TEST_MAIN_BEGIN
 RUN_TEST(TestSnoozeCalculation);
 RUN_TEST(TestOnceAlarmCalculation);
+RUN_TEST(TestSchedulerRejectsMalformedInput);
+RUN_TEST(TestOnceAlarmSkippedTomorrowReturnsNoTrigger);
+RUN_TEST(TestOemVendorDetectionHandlesNonAscii);
 RUN_TEST(TestStatutoryWorkdaySchedulerWithHolidays);
 TEST_MAIN_END
